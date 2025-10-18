@@ -1,0 +1,16 @@
+# GEO run artifacts
+GSE*/01_GEO_data/
+GSE*/02_DEG/
+GSE*/03_GSEA/
+GSE*/index.html
+GSE*/run_metadata.json
+
+# Meta-analysis dashboards
+meta_results/
+
+# Release bundles
+ERAPID_*.zip
+
+# Python cache
+__pycache__/
+*.py[cod]

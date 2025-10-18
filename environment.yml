@@ -1,0 +1,53 @@
+name: erapid
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Core
+  - python=3.11
+  - pip
+  - curl
+  - ripgrep
+  - pandas
+  - numpy
+  - requests
+  - matplotlib
+  - scikit-learn
+
+  # R base (conda-forge, osx-arm64 friendly)
+  - r-base>=4.3
+
+  # CRAN packages (conda-forge builds)
+  - r-dplyr
+  - r-tibble
+  - r-readr
+  - r-ggplot2
+  - r-plotly
+  - r-htmlwidgets
+  - r-htmltools
+  - r-msigdbr
+  - r-stringr
+  - r-ggrepel
+  - r-base64enc
+  - r-pheatmap
+  - r-rmarkdown
+
+  # Bioconductor packages (bioconda builds)
+  - bioconductor-deseq2
+  - bioconductor-sva
+  - bioconductor-limma
+  - bioconductor-fgsea
+  - bioconductor-apeglm
+  - bioconductor-biocparallel
+  - bioconductor-edger
+  - bioconductor-variancepartition
+
+  # BLAS (for performance on Apple Silicon via OpenBLAS)
+  - openblas
+
+  # Python packages not covered by conda recipes
+  - pip:
+      - ddgs>=1.7
+      - trafilatura>=1.7
+      - plotly>=5.22
+      - upsetplot>=0.9
