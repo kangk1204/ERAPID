@@ -1895,7 +1895,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
     top_preview_html = ""
     if not summary_df.empty:
         status_preview_cols = [
-            f"{meta['slug']}_status" for meta in contrast_meta_sorted[:min(4, len(contrast_meta_sorted))]
+            f"{meta['slug']}_status" for meta in contrast_meta_sorted[:min(10, len(contrast_meta_sorted))]
         ]
         preview_candidates = [
             'GeneID',
