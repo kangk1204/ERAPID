@@ -35,6 +35,7 @@ The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so 
      - `--batch_cols age,sex` for an explicit formula.
      - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
      - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
+     - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. For a two-level group, the first value is treated as control; for more than two levels, ERAPID walks the list in order, ensuring each entry becomes the reference before moving on. If omitted, the tool auto-detects familiar control-like labels (Control, Healthy, etc.) or defaults to the first factor level. Because log₂ fold changes, RNK files, and FGSEA directionality all compare *test vs. reference*, the right `--group_ref` is critical for reproducible interpretation.
       - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
 
 3. **Inspect results**
@@ -108,6 +109,7 @@ python erapid.py \
 - `--seed`: set an R random seed for reproducibility.
 - `--no_interactive_plots`: skip HTML volcano/MA plots when running headless.
 - `--force_evidence` / `--evidence_top_n`: control the evidence-gathering stage for prioritized genes.
+- `--group_ref`: comma-separated priority list used to anchor contrast orientation (first match is the reference for each pairwise test; remaining levels are treated as “test”). This controls the sign of every log₂ fold change and downstream pathway direction, so double-check it matches the biological control.
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
 - `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
 
