@@ -1,0 +1,290 @@
+gsm	group_primary	age	diagnosis	sex
+GSM3577568	ad	93	Alzheimer's disease	F
+GSM3577569	ad	77	Alzheimer's disease	M
+GSM3577570	ad	92	Alzheimer's disease	M
+GSM3577571	ad	85	Alzheimer's disease	M
+GSM3577572	ad	83	Alzheimer's disease	M
+GSM3577573	ad	85	Alzheimer's disease	M
+GSM3577574	ad	93	Alzheimer's disease	F
+GSM3577575	ad	96	Alzheimer's disease	M
+GSM3577576	ad	96	Alzheimer's disease	F
+GSM3577577	ad	88	Alzheimer's disease	F
+GSM3577578	ad	97	Alzheimer's disease	M
+GSM3577579	ad	79	Alzheimer's disease	M
+GSM3577581	ad	89	Alzheimer's disease	M
+GSM3577582	ad	89	Alzheimer's disease	F
+GSM3577585	ad	85	Alzheimer's disease	F
+GSM3577586	ad	64	Alzheimer's disease	F
+GSM3577588	ad	82	Alzheimer's disease	M
+GSM3577590	ad	91	Alzheimer's disease	M
+GSM3577591	ad	77	Alzheimer's disease	M
+GSM3577592	ad	96	Alzheimer's disease	F
+GSM3577593	ad	80	Alzheimer's disease	M
+GSM3577594	ad	82	Alzheimer's disease	F
+GSM3577596	ad	90	Alzheimer's disease	M
+GSM3577597	ad	80	Alzheimer's disease	M
+GSM3577598	ad	86	Alzheimer's disease	M
+GSM3577600	ad	93	Alzheimer's disease	F
+GSM3577601	ad	88	Alzheimer's disease	M
+GSM3577602	ad	86	Alzheimer's disease	M
+GSM3577605	ad		Alzheimer's disease	
+GSM3577606	ad	82	Alzheimer's disease	M
+GSM3577607	ad	88	Alzheimer's disease	F
+GSM3577608	ad	85	Alzheimer's disease	M
+GSM3577609	ad	65	Alzheimer's disease	F
+GSM3577610	ad	85	Alzheimer's disease	M
+GSM3577611	ad	86	Alzheimer's disease	M
+GSM3577612	ad	78	Alzheimer's disease	M
+GSM3577613	ad	74	Alzheimer's disease	M
+GSM3577615	ad	103	Alzheimer's disease	F
+GSM3577616	ad	82	Alzheimer's disease	F
+GSM3577617	ad	77	Alzheimer's disease	F
+GSM3577618	ad	86	Alzheimer's disease	M
+GSM3577619	ad	96	Alzheimer's disease	F
+GSM3577620	ad	90	Alzheimer's disease	M
+GSM3577621	ad	79	Alzheimer's disease	M
+GSM3577623	ad	78	Alzheimer's disease	M
+GSM3577625	ad	86	Alzheimer's disease	F
+GSM3577626	ad	86	Alzheimer's disease	F
+GSM3577627	ad	86	Alzheimer's disease	F
+GSM3577628	ad	83	Alzheimer's disease	M
+GSM3577630	ad	86	Alzheimer's disease	M
+GSM3577631	ad	85	Alzheimer's disease	M
+GSM3577632	ad	88	Alzheimer's disease	F
+GSM3577633	ad	70	Alzheimer's disease	M
+GSM3577634	ad	81	Alzheimer's disease	M
+GSM3577636	ad	97	Alzheimer's disease	F
+GSM3577638	ad	77	Alzheimer's disease	M
+GSM3577639	ad	91	Alzheimer's disease	F
+GSM3577640	ad	89	Alzheimer's disease	M
+GSM3577643	ad	82	Alzheimer's disease	M
+GSM3577645	ad	75	Alzheimer's disease	M
+GSM3577646	ad	95	Alzheimer's disease	M
+GSM3577648	ad	92	Alzheimer's disease	M
+GSM3577649	ad	79	Alzheimer's disease	F
+GSM3577650	ad	90	Alzheimer's disease	F
+GSM3577652	ad	96	Alzheimer's disease	F
+GSM3577653	ad	82	Alzheimer's disease	M
+GSM3577654	ad	91	Alzheimer's disease	F
+GSM3577656	ad	81	Alzheimer's disease	M
+GSM3577658	ad	86	Alzheimer's disease	F
+GSM3577659	ad	69	Alzheimer's disease	M
+GSM3577660	ad	76	Alzheimer's disease	M
+GSM3577662	ad	76	Alzheimer's disease	M
+GSM3577664	ad	82	Alzheimer's disease	M
+GSM3577665	ad	88	Alzheimer's disease	M
+GSM3577666	ad	89	Alzheimer's disease	M
+GSM3577667	ad	85	Alzheimer's disease	F
+GSM3577668	ad	81	Alzheimer's disease	M
+GSM3577669	ad	70	Alzheimer's disease	F
+GSM3577670	ad	84	Alzheimer's disease	F
+GSM3577673	ad	91	Alzheimer's disease	M
+GSM3577674	ad	76	Alzheimer's disease	M
+GSM3577675	ad	81	Alzheimer's disease	F
+GSM3577676	ad	86	Alzheimer's disease	M
+GSM3577677	ad	95	Alzheimer's disease	M
+GSM3577679	ad	86	Alzheimer's disease	F
+GSM3577680	ad	86	Alzheimer's disease	F
+GSM3577681	ad	83	Alzheimer's disease	M
+GSM3577683	ad	72	Alzheimer's disease	M
+GSM3577684	ad	102	Alzheimer's disease	F
+GSM3577687	ad	92	Alzheimer's disease	F
+GSM3577688	ad	83	Alzheimer's disease	M
+GSM3577690	ad	88	Alzheimer's disease	M
+GSM3577692	ad	74	Alzheimer's disease	F
+GSM3577693	ad	85	Alzheimer's disease	F
+GSM3577694	ad	79	Alzheimer's disease	M
+GSM3577695	ad	80	Alzheimer's disease	M
+GSM3577696	ad	77	Alzheimer's disease	M
+GSM3577697	ad	69	Alzheimer's disease	F
+GSM3577698	ad	84	Alzheimer's disease	M
+GSM3577701	ad	76	Alzheimer's disease	M
+GSM3577702	ad	71	Alzheimer's disease	F
+GSM3577704	ad	67	Alzheimer's disease	M
+GSM3577705	ad	81	Alzheimer's disease	M
+GSM3577706	ad	87	Alzheimer's disease	F
+GSM3577707	ad	97	Alzheimer's disease	M
+GSM3577708	ad	94	Alzheimer's disease	F
+GSM3577711	ad	92	Alzheimer's disease	F
+GSM3577712	ad	82	Alzheimer's disease	M
+GSM3577713	ad	73	Alzheimer's disease	M
+GSM3577716	ad	76	Alzheimer's disease	M
+GSM3577718	ad	76	Alzheimer's disease	M
+GSM3577719	ad	70	Alzheimer's disease	F
+GSM3577720	ad	80	Alzheimer's disease	M
+GSM3577721	ad	87	Alzheimer's disease	M
+GSM3577722	ad	88	Alzheimer's disease	F
+GSM3577723	ad	91	Alzheimer's disease	F
+GSM3577724	ad	98	Alzheimer's disease	F
+GSM3577725	ad	85	Alzheimer's disease	M
+GSM3577726	ad	84	Alzheimer's disease	M
+GSM3577727	ad	65	Alzheimer's disease	M
+GSM3577728	ad	78	Alzheimer's disease	F
+GSM3577729	ad	74	Alzheimer's disease	F
+GSM3577730	ad	91	Alzheimer's disease	F
+GSM3577732	ad	61	Alzheimer's disease	F
+GSM3577733	ad	87	Alzheimer's disease	M
+GSM3577734	ad	89	Alzheimer's disease	F
+GSM3577736	ad	88	Alzheimer's disease	M
+GSM3577737	ad	74	Alzheimer's disease	F
+GSM3577739	ad	76	Alzheimer's disease	M
+GSM3577742	ad	76	Alzheimer's disease	F
+GSM3577743	ad	84	Alzheimer's disease	M
+GSM3577746	ad	60	Alzheimer's disease	F
+GSM3577747	ad	97	Alzheimer's disease	F
+GSM3577748	ad	94	Alzheimer's disease	F
+GSM3577750	ad	86	Alzheimer's disease	F
+GSM3577751	ad	87	Alzheimer's disease	F
+GSM3577753	ad	72	Alzheimer's disease	M
+GSM3577754	ad	81	Alzheimer's disease	M
+GSM3577755	ad	90	Alzheimer's disease	M
+GSM3577756	ad	85	Alzheimer's disease	M
+GSM3577757	ad	85	Alzheimer's disease	F
+GSM3577758	ad	74	Alzheimer's disease	M
+GSM3577759	ad	77	Alzheimer's disease	M
+GSM3577760	ad	85	Alzheimer's disease	M
+GSM3577763	ad	80	Alzheimer's disease	M
+GSM3577764	ad	87	Alzheimer's disease	F
+GSM3577765	ad	85	Alzheimer's disease	M
+GSM3577766	ad	84	Alzheimer's disease	F
+GSM3577768	ad	79	Alzheimer's disease	M
+GSM3577769	ad	66	Alzheimer's disease	F
+GSM3577770	ad	86	Alzheimer's disease	F
+GSM3577771	ad	70	Alzheimer's disease	F
+GSM3577772	ad	60	Alzheimer's disease	F
+GSM3577773	ad	82	Alzheimer's disease	M
+GSM3577774	ad	81	Alzheimer's disease	F
+GSM3577776	ad	87	Alzheimer's disease	M
+GSM3577777	ad	85	Alzheimer's disease	F
+GSM3577780	ad	91	Alzheimer's disease	F
+GSM3577781	ad	75	Alzheimer's disease	M
+GSM3577782	ad	85	Alzheimer's disease	F
+GSM3577783	ad	94	Alzheimer's disease	F
+GSM3577784	ad	81	Alzheimer's disease	M
+GSM3577785	ad	84	Alzheimer's disease	M
+GSM3577787	ad	82	Alzheimer's disease	F
+GSM3577788	ad	79	Alzheimer's disease	F
+GSM3577790	ad	81	Alzheimer's disease	M
+GSM3577791	ad	86	Alzheimer's disease	F
+GSM3577795	ad	76	Alzheimer's disease	M
+GSM3577796	ad	84	Alzheimer's disease	F
+GSM3577797	ad	92	Alzheimer's disease	F
+GSM3577798	ad	86	Alzheimer's disease	M
+GSM3577799	ad	87	Alzheimer's disease	F
+GSM3577800	ad	89	Alzheimer's disease	M
+GSM3577801	ad	91	Alzheimer's disease	F
+GSM3577802	ad	94	Alzheimer's disease	F
+GSM3577803	ad	90	Alzheimer's disease	M
+GSM3577804	ad	76	Alzheimer's disease	F
+GSM3577805	ad	77	Alzheimer's disease	M
+GSM3577806	ad	82	Alzheimer's disease	M
+GSM3577807	ad	91	Alzheimer's disease	F
+GSM3577808	ad	87	Alzheimer's disease	M
+GSM3577809	ad	91	Alzheimer's disease	M
+GSM3577811	ad	87	Alzheimer's disease	M
+GSM3577813	ad	91	Alzheimer's disease	F
+GSM3577814	ad	80	Alzheimer's disease	M
+GSM3577815	ad	78	Alzheimer's disease	M
+GSM3577816	ad	84	Alzheimer's disease	M
+GSM3577817	ad	79	Alzheimer's disease	F
+GSM3577818	ad	80	Alzheimer's disease	M
+GSM3577820	ad	75	Alzheimer's disease	M
+GSM3577821	ad	87	Alzheimer's disease	M
+GSM3577822	ad	68	Alzheimer's disease	M
+GSM3577823	ad	82	Alzheimer's disease	F
+GSM3577824	ad	83	Alzheimer's disease	F
+GSM3577825	ad	101	Alzheimer's disease	F
+GSM3577826	ad	92	Alzheimer's disease	M
+GSM3577827	ad	73	Alzheimer's disease	M
+GSM3577828	ad	88	Alzheimer's disease	M
+GSM3577829	ad	93	Alzheimer's disease	M
+GSM3577830	ad	77	Alzheimer's disease	F
+GSM3577831	ad	88	Alzheimer's disease	M
+GSM3577832	ad	82	Alzheimer's disease	F
+GSM3577833	ad	82	Alzheimer's disease	F
+GSM3577834	ad	91	Alzheimer's disease	F
+GSM3577835	ad	64	Alzheimer's disease	M
+GSM3577837	ad	74	Alzheimer's disease	F
+GSM3577838	ad	91	Alzheimer's disease	F
+GSM3577839	ad	74	Alzheimer's disease	M
+GSM3577841	ad	85	Alzheimer's disease	M
+GSM3577842	ad	65	Alzheimer's disease	F
+GSM3577844	ad	90	Alzheimer's disease	F
+GSM3577845	ad	86	Alzheimer's disease	F
+GSM3577846	ad	88	Alzheimer's disease	M
+GSM3577848	ad	91	Alzheimer's disease	F
+GSM3577852	ad	75	Alzheimer's disease	M
+GSM3577853	ad	86	Alzheimer's disease	F
+GSM3577854	ad	83	Alzheimer's disease	M
+GSM3577855	ad	92	Alzheimer's disease	F
+GSM3577856	ad	78	Alzheimer's disease	M
+GSM3577580	control	76	control	M
+GSM3577583	control	78	control	F
+GSM3577584	control	80	control	M
+GSM3577587	control	95	control	F
+GSM3577589	control	83	control	F
+GSM3577595	control	82	control	M
+GSM3577599	control	87	control	F
+GSM3577603	control	90	control	F
+GSM3577604	control	99	control	F
+GSM3577614	control	87	control	M
+GSM3577622	control	89	control	M
+GSM3577624	control	94	control	M
+GSM3577629	control	80	control	F
+GSM3577635	control	80	control	M
+GSM3577637	control	85	control	F
+GSM3577641	control	91	control	F
+GSM3577642	control	83	control	M
+GSM3577644	control	81	control	M
+GSM3577647	control	79	control	F
+GSM3577651	control	89	control	F
+GSM3577655	control	96	control	F
+GSM3577657	control	84	control	F
+GSM3577661	control	80	control	F
+GSM3577663	control	81	control	M
+GSM3577671	control	75	control	F
+GSM3577672	control	92	control	M
+GSM3577678	control	87	control	F
+GSM3577682	control	87	control	F
+GSM3577685	control	82	control	M
+GSM3577686	control	86	control	F
+GSM3577689	control	90	control	M
+GSM3577691	control	82	control	F
+GSM3577699	control	91	control	M
+GSM3577700	control	81	control	M
+GSM3577703	control	89	control	M
+GSM3577709	control	71	control	M
+GSM3577710	control	82	control	M
+GSM3577714	control	103	control	F
+GSM3577715	control	87	control	M
+GSM3577717	control	86	control	M
+GSM3577731	control	92	control	F
+GSM3577735	control	100	control	M
+GSM3577738	control	84	control	M
+GSM3577740	control	93	control	M
+GSM3577741	control	87	control	M
+GSM3577744	control	88	control	F
+GSM3577745	control	90	control	F
+GSM3577749	control	86	control	M
+GSM3577752	control	81	control	M
+GSM3577761	control	92	control	F
+GSM3577762	control	88	control	F
+GSM3577767	control	90	control	F
+GSM3577775	control	91	control	F
+GSM3577778	control	91	control	M
+GSM3577779	control	92	control	M
+GSM3577786	control	79	control	M
+GSM3577789	control	91	control	M
+GSM3577792	control	89	control	M
+GSM3577793	control	84	control	M
+GSM3577794	control	99	control	F
+GSM3577810	control	88	control	F
+GSM3577812	control	97	control	F
+GSM3577819	control	97	control	M
+GSM3577836	control	82	control	F
+GSM3577840	control	82	control	F
+GSM3577843	control	91	control	M
+GSM3577847	control	90	control	M
+GSM3577849	control	80	control	M
+GSM3577850	control	91	control	F
+GSM3577851	control	85	control	M

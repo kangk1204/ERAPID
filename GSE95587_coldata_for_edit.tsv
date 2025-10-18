@@ -1,0 +1,118 @@
+gsm	group_primary	age_at_death	diagnosis	post_mortem_interval	rin_score	sex
+GSM2516809	control	82	control	3	6.8	M
+GSM2516812	control	73	control	2	5.1	M
+GSM2516819	control	86	control	2.8	6.1	M
+GSM2516821	control	82	control	3	8.2	M
+GSM2516825	control	99	control	3.5	7.4	F
+GSM2516827	control	92	control	3.83	5.7	M
+GSM2516831	control	80	control	2.16	5.3	M
+GSM2516834	control	92	control	3	6.4	M
+GSM2516837	control	82	control	2.16	7.9	M
+GSM2516838	control	83	control	4.83	7.4	F
+GSM2516842	control	91	control	2.5	7.7	F
+GSM2516848	control	80	control	2.88	6.7	F
+GSM2516849	control	80	control	2	7.2	F
+GSM2516852	control	89	control	2.5	6.6	M
+GSM2516853	control	81	control	2.25	7.2	M
+GSM2516854	control	87	control	2.75	6.6	F
+GSM2516859	control	86	control	2	7.7	M
+GSM2516868	control	87	control	3.5	6.2	M
+GSM2516871	control	78	control	3.75	7	F
+GSM2516872	control	93	control	2.08	7.9	M
+GSM2516873	control	79	control	2.22	7.4	F
+GSM2516878	control	78	control	2.75	6.7	M
+GSM2516883	control	87	control	2.25	6.1	M
+GSM2516885	control	80	control	3.5	6.1	M
+GSM2516900	control	76	control	2.33	7.3	M
+GSM2516904	control	90	control	1.83	8.5	F
+GSM2516905	control	97	control	3.5	7.7	F
+GSM2516906	control	79	control	3	6.6	M
+GSM2516911	control	81	control	2.25	7.7	M
+GSM2516913	control	80	control	2.5	8.3	M
+GSM2516914	control	97	control	1.87	6	M
+GSM2516918	control	91	control	3.27	7.2	M
+GSM2516922	control	81	control	3.75	7.7	M
+GSM2516806	ad	97	Alzheimer's disease	3.16	6.9	F
+GSM2516807	ad	97	Alzheimer's disease	3.33	7.1	F
+GSM2516808	ad	87	Alzheimer's disease	3	6.1	F
+GSM2516810	ad	80	Alzheimer's disease	2.5	5.5	M
+GSM2516811	ad	101	Alzheimer's disease	1.85	6.9	F
+GSM2516813	ad	93	Alzheimer's disease	1.4	6.2	F
+GSM2516814	ad	94	Alzheimer's disease	3.75	5.4	M
+GSM2516815	ad	78	Alzheimer's disease	3.33	6.1	M
+GSM2516816	ad	88	Alzheimer's disease	3.5	6.5	F
+GSM2516817	ad	91	Alzheimer's disease	1.92	7.6	F
+GSM2516818	ad	86	Alzheimer's disease	2.16	6.8	M
+GSM2516820	ad	89	Alzheimer's disease	3	5.7	M
+GSM2516822	ad	70	Alzheimer's disease	2.66	7.3	F
+GSM2516823	ad	80	Alzheimer's disease	3.16	6	M
+GSM2516824	ad	85	Alzheimer's disease	2.25	6.5	M
+GSM2516826	ad	74	Alzheimer's disease	3	5.4	F
+GSM2516828	ad	81	Alzheimer's disease	3.33	7.5	M
+GSM2516829	ad	77	Alzheimer's disease	3.25	6.7	M
+GSM2516830	ad	90	Alzheimer's disease	2.53	6	F
+GSM2516832	ad	103	Alzheimer's disease	2.6	6.4	F
+GSM2516833	ad	84	Alzheimer's disease	2.33	5.4	M
+GSM2516835	ad	92	Alzheimer's disease	2	6.5	M
+GSM2516836	ad	91	Alzheimer's disease	3.5	5.7	F
+GSM2516839	ad	86	Alzheimer's disease	3.5	6.4	F
+GSM2516840	ad	79	Alzheimer's disease	2	6.2	M
+GSM2516841	ad	88	Alzheimer's disease	3.25	5.4	F
+GSM2516843	ad	98	Alzheimer's disease	2.5	5.2	F
+GSM2516844	ad	85	Alzheimer's disease	2.66	5.4	F
+GSM2516845	ad	89	Alzheimer's disease	2.95	5.8	M
+GSM2516846	ad	92	Alzheimer's disease	2.5	6.8	F
+GSM2516847	ad	78	Alzheimer's disease	2.25	6.7	M
+GSM2516850	ad	60	Alzheimer's disease	3.33	6.1	F
+GSM2516851	ad	88	Alzheimer's disease	2.66	6.7	F
+GSM2516855	ad	86	Alzheimer's disease	1.83	7.4	F
+GSM2516856	ad	85	Alzheimer's disease	2.25	6.6	F
+GSM2516857	ad	81	Alzheimer's disease	3	7.6	M
+GSM2516858	ad	96	Alzheimer's disease	4	5.9	F
+GSM2516860	ad	86	Alzheimer's disease	2.5	5	F
+GSM2516861	ad	76	Alzheimer's disease	3.33	7.4	M
+GSM2516862	ad	64	Alzheimer's disease	2.33	6.9	M
+GSM2516863	ad	86	Alzheimer's disease	1.5	7.5	F
+GSM2516864	ad	80	Alzheimer's disease	2.77	6.9	M
+GSM2516865	ad	92	Alzheimer's disease	3.12	5.6	F
+GSM2516866	ad	91	Alzheimer's disease	4.66	6	F
+GSM2516867	ad	91	Alzheimer's disease	1.83	7	F
+GSM2516869	ad	91	Alzheimer's disease	3	6.9	F
+GSM2516870	ad	89	Alzheimer's disease	2.75	5.8	F
+GSM2516874	ad	81	Alzheimer's disease	4	6.2	F
+GSM2516875	ad	81	Alzheimer's disease	2.83	6.7	M
+GSM2516876	ad	93	Alzheimer's disease	2.75	6.1	M
+GSM2516877	ad	85	Alzheimer's disease	2.5	6	M
+GSM2516879	ad	79	Alzheimer's disease	2.5	6.7	M
+GSM2516880	ad	89	Alzheimer's disease	2.2	7.5	M
+GSM2516881	ad	85	Alzheimer's disease	3	7.6	M
+GSM2516882	ad	66	Alzheimer's disease	2.75	7.8	F
+GSM2516884	ad	86	Alzheimer's disease	3.16	6	M
+GSM2516886	ad	82	Alzheimer's disease	3	5.8	M
+GSM2516887	ad	73	Alzheimer's disease	4.92	6.6	M
+GSM2516888	ad	71	Alzheimer's disease	2.17	6	F
+GSM2516889	ad	96	Alzheimer's disease	4.5	6.3	M
+GSM2516890	ad	95	Alzheimer's disease	2	7.5	F
+GSM2516891	ad	85	Alzheimer's disease	3.66	7.3	M
+GSM2516892	ad	90	Alzheimer's disease	3.75	6.1	M
+GSM2516893	ad	89	Alzheimer's disease	2	7.3	M
+GSM2516894	ad	75	Alzheimer's disease	3	7.1	M
+GSM2516895	ad	91	Alzheimer's disease	2.5	6.4	F
+GSM2516896	ad	82	Alzheimer's disease	2.67	6.2	M
+GSM2516897	ad	89	Alzheimer's disease	3	6.6	M
+GSM2516898	ad	87	Alzheimer's disease	3.13	7.3	M
+GSM2516899	ad	87	Alzheimer's disease	4	7	M
+GSM2516901	ad	87	Alzheimer's disease	4.17	7.4	F
+GSM2516902	ad	89	Alzheimer's disease	2.66	7.2	F
+GSM2516903	ad	87	Alzheimer's disease	3.33	7.3	F
+GSM2516907	ad	87	Alzheimer's disease	2.5	6.3	M
+GSM2516908	ad	96	Alzheimer's disease	1.66	7.6	F
+GSM2516909	ad	77	Alzheimer's disease	2	6	M
+GSM2516910	ad	87	Alzheimer's disease	2	7.2	M
+GSM2516912	ad	94	Alzheimer's disease	2.5	7.3	F
+GSM2516915	ad	82	Alzheimer's disease	4.5	6.3	F
+GSM2516916	ad	93	Alzheimer's disease	2.15	7.3	F
+GSM2516917	ad	84	Alzheimer's disease	1.5	6.9	M
+GSM2516919	ad	97	Alzheimer's disease	2.98	7.4	M
+GSM2516920	ad	82	Alzheimer's disease	3	6.4	M
+GSM2516921	ad	88	Alzheimer's disease	2.28	7.2	F

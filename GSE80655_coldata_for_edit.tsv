@@ -1,0 +1,282 @@
+gsm	group_primary	age_at_death	brain_ph	brain_region	clinical_diagnosis	gender	post_mortem_interval	sex
+GSM2132203	BP	56	6.83	AnCg	Bipolar Disorder	F	29	F
+GSM2132213	BP	69	6.91	DLPFC	Bipolar Disorder	M	11.25	M
+GSM2132216	BP	32	6.94	DLPFC	Bipolar Disorder	M	23.75	M
+GSM2132217	BP	36	7	AnCg	Bipolar Disorder	F	25.5	F
+GSM2132224	BP	51	6.75	AnCg	Bipolar Disorder	M	14.6	M
+GSM2132225	BP	40	6.77	AnCg	Bipolar Disorder	M	26.3	M
+GSM2132241	BP	52	6.63	DLPFC	Bipolar Disorder	M	36	M
+GSM2132243	BP	53	6.88	DLPFC	Bipolar Disorder	M	25	M
+GSM2132245	BP	69	6.91	nAcc	Bipolar Disorder	M	11.25	M
+GSM2132249	BP	36	6.69	nAcc	Bipolar Disorder	M	25.5	M
+GSM2132254	BP	51	6.75	nAcc	Bipolar Disorder	M	14.6	M
+GSM2132255	BP	51	6.63	nAcc	Bipolar Disorder	F	9.2	F
+GSM2132257	BP	52	6.69	nAcc	Bipolar Disorder	M	22.2	M
+GSM2132259	BP	59	6.55	nAcc	Bipolar Disorder	F	27	F
+GSM2132262	BP	23	7.12	DLPFC	Bipolar Disorder	M	9	M
+GSM2132264	BP	40	6.77	DLPFC	Bipolar Disorder	M	26.3	M
+GSM2132268	BP	32	6.94	AnCg	Bipolar Disorder	M	23.75	M
+GSM2132277	BP	53	6.88	AnCg	Bipolar Disorder	M	25	M
+GSM2132287	BP	49	6.87	DLPFC	Bipolar Disorder	M	29.5	M
+GSM2132293	BP	70	6.96	nAcc	Bipolar Disorder	M	27.5	M
+GSM2132295	BP	51	6.81	nAcc	Bipolar Disorder	F	16.8	F
+GSM2132299	BP	42	6.52	DLPFC	Bipolar Disorder	M	17.2	M
+GSM2132301	BP	59	6.99	AnCg	Bipolar Disorder	M	15.5	M
+GSM2132304	BP	52	7.05	nAcc	Bipolar Disorder	M	28	M
+GSM2132305	BP	69	6.65	nAcc	Bipolar Disorder	F	28.25	F
+GSM2132307	BP	25	6.68	nAcc	Bipolar Disorder	F	13.8	F
+GSM2132309	BP	51	6.75	DLPFC	Bipolar Disorder	M	14.6	M
+GSM2132312	BP	69	6.65	AnCg	Bipolar Disorder	F	28.25	F
+GSM2132318	BP	53	6.88	nAcc	Bipolar Disorder	M	25	M
+GSM2132322	BP	59	6.99	DLPFC	Bipolar Disorder	M	15.5	M
+GSM2132328	BP	26	6.92	nAcc	Bipolar Disorder	M	19	M
+GSM2132330	BP	42	6.52	nAcc	Bipolar Disorder	M	17.2	M
+GSM2132332	BP	26	6.92	DLPFC	Bipolar Disorder	M	19	M
+GSM2132334	BP	51	6.63	DLPFC	Bipolar Disorder	F	9.2	F
+GSM2132336	BP	52	6.63	AnCg	Bipolar Disorder	M	36	M
+GSM2132337	BP	26	6.92	AnCg	Bipolar Disorder	M	19	M
+GSM2132338	BP	59	6.55	AnCg	Bipolar Disorder	F	27	F
+GSM2132351	BP	36	7	nAcc	Bipolar Disorder	F	25.5	F
+GSM2132352	BP	49	6.87	nAcc	Bipolar Disorder	M	29.5	M
+GSM2132353	BP	63	6.87	nAcc	Bipolar Disorder	M	40	M
+GSM2132368	BP	52	7.05	DLPFC	Bipolar Disorder	M	28	M
+GSM2132370	BP	63	6.87	AnCg	Bipolar Disorder	M	40	M
+GSM2132372	BP	69	6.91	AnCg	Bipolar Disorder	M	11.25	M
+GSM2132377	BP	59	6.99	nAcc	Bipolar Disorder	M	15.5	M
+GSM2132379	BP	70	6.96	DLPFC	Bipolar Disorder	M	27.5	M
+GSM2132385	BP	49	6.87	AnCg	Bipolar Disorder	M	29.5	M
+GSM2132388	BP	23	7.12	nAcc	Bipolar Disorder	M	9	M
+GSM2132391	BP	51	6.81	DLPFC	Bipolar Disorder	F	16.8	F
+GSM2132401	BP	32	6.94	nAcc	Bipolar Disorder	M	23.75	M
+GSM2132404	BP	56	6.83	DLPFC	Bipolar Disorder	F	29	F
+GSM2132411	BP	40	6.77	nAcc	Bipolar Disorder	M	26.3	M
+GSM2132417	BP	52	7.05	AnCg	Bipolar Disorder	M	28	M
+GSM2132424	BP	49	6.74	DLPFC	Bipolar Disorder	F	15.9	F
+GSM2132425	BP	25	6.68	DLPFC	Bipolar Disorder	F	13.8	F
+GSM2132426	BP	59	6.55	DLPFC	Bipolar Disorder	F	27	F
+GSM2132430	BP	56	6.83	nAcc	Bipolar Disorder	F	29	F
+GSM2132444	BP	49	6.74	AnCg	Bipolar Disorder	F	15.9	F
+GSM2132445	BP	52	6.69	DLPFC	Bipolar Disorder	M	22.2	M
+GSM2132447	BP	70	6.96	AnCg	Bipolar Disorder	M	27.5	M
+GSM2132448	BP	52	6.63	nAcc	Bipolar Disorder	M	36	M
+GSM2132449	BP	69	6.65	DLPFC	Bipolar Disorder	F	28.25	F
+GSM2132450	BP	52	6.69	AnCg	Bipolar Disorder	M	22.2	M
+GSM2132451	BP	51	6.63	AnCg	Bipolar Disorder	F	9.2	F
+GSM2132454	BP	25	6.68	AnCg	Bipolar Disorder	F	13.8	F
+GSM2132463	BP	42	6.52	AnCg	Bipolar Disorder	M	17.2	M
+GSM2132465	BP	23	7.12	AnCg	Bipolar Disorder	M	9	M
+GSM2132470	BP	63	6.87	DLPFC	Bipolar Disorder	M	40	M
+GSM2132473	BP	36	6.69	AnCg	Bipolar Disorder	M	25.5	M
+GSM2132475	BP	51	6.81	AnCg	Bipolar Disorder	F	16.8	F
+GSM2132476	BP	49	6.74	nAcc	Bipolar Disorder	F	15.9	F
+GSM2132481	BP	36	7	DLPFC	Bipolar Disorder	F	25.5	F
+GSM2132201	Control	40	6.76	AnCg	Control	M	12.25	M
+GSM2132206	Control	43	7.1	nAcc	Control	M	26	M
+GSM2132207	Control	45	6.86	nAcc	Control	M	21	M
+GSM2132209	Control	44	6.87	AnCg	Control	M	23	M
+GSM2132210	Control	41	7.01	AnCg	Control	M	22.5	M
+GSM2132211	Control	65	6.88	AnCg	Control	M	13.5	M
+GSM2132212	Control	56	6.98	AnCg	Control	M	24.5	M
+GSM2132226	Control	32	6.97	DLPFC	Control	M	26	M
+GSM2132227	Control	44	6.87	DLPFC	Control	M	23	M
+GSM2132228	Control	35	6.76	DLPFC	Control	M	32	M
+GSM2132233	Control	32	7.04	DLPFC	Control	M	10	M
+GSM2132235	Control	70	7.03	nAcc	Control	M	28	M
+GSM2132236	Control	35	6.76	nAcc	Control	M	32	M
+GSM2132237	Control	39	7.02	nAcc	Control	M	30	M
+GSM2132238	Control	41	7.01	nAcc	Control	M	22.5	M
+GSM2132239	Control	65	6.88	nAcc	Control	M	13.5	M
+GSM2132258	Control	32	6.97	nAcc	Control	M	26	M
+GSM2132260	Control	70	6.9	AnCg	Control	F	20.5	F
+GSM2132263	Control	65	6.88	DLPFC	Control	M	13.5	M
+GSM2132269	Control	66	6.94	nAcc	Control	M	18	M
+GSM2132270	Control	49	6.68	nAcc	Control	M	27.5	M
+GSM2132274	Control	58	7.02	DLPFC	Control	M	26	M
+GSM2132275	Control	48	6.79	DLPFC	Control	M	20.2	M
+GSM2132278	Control	32	7.04	AnCg	Control	M	10	M
+GSM2132284	Control	66	6.94	DLPFC	Control	M	18	M
+GSM2132285	Control	56	6.98	DLPFC	Control	M	24.5	M
+GSM2132288	Control	39	7.02	AnCg	Control	M	30	M
+GSM2132290	Control	45	6.86	AnCg	Control	M	21	M
+GSM2132297	Control	45	6.86	DLPFC	Control	M	21	M
+GSM2132302	Control	32	6.97	AnCg	Control	M	26	M
+GSM2132310	Control	49	6.68	DLPFC	Control	M	27.5	M
+GSM2132311	Control	41	7.01	DLPFC	Control	M	22.5	M
+GSM2132316	Control	40	6.76	nAcc	Control	M	12.25	M
+GSM2132317	Control	55	6.89	nAcc	Control	M	15	M
+GSM2132320	Control	40	6.76	DLPFC	Control	M	12.25	M
+GSM2132333	Control	40	7.07	DLPFC	Control	M	36.5	M
+GSM2132339	Control	49	6.68	AnCg	Control	M	27.5	M
+GSM2132348	Control	55	6.89	AnCg	Control	M	15	M
+GSM2132358	Control	70	6.9	nAcc	Control	F	20.5	F
+GSM2132359	Control	70	7.03	AnCg	Control	M	28	M
+GSM2132364	Control	39	6.81	nAcc	Control	M	18.15	M
+GSM2132367	Control	70	7.03	DLPFC	Control	M	28	M
+GSM2132374	Control	44	6.87	nAcc	Control	M	23	M
+GSM2132376	Control	67	6.96	nAcc	Control	M	15	M
+GSM2132378	Control	43	7.1	DLPFC	Control	M	26	M
+GSM2132382	Control	39	6.81	AnCg	Control	M	18.15	M
+GSM2132386	Control	32	7.04	nAcc	Control	M	10	M
+GSM2132387	Control	63	6.88	nAcc	Control	M	24.5	M
+GSM2132389	Control	45	7.05	nAcc	Control	F	16	F
+GSM2132390	Control	63	6.88	DLPFC	Control	M	24.5	M
+GSM2132392	Control	67	6.96	DLPFC	Control	M	15	M
+GSM2132402	Control	64	6.83	DLPFC	Control	F	19.25	F
+GSM2132406	Control	35	6.76	AnCg	Control	M	32	M
+GSM2132422	Control	55	6.89	DLPFC	Control	M	15	M
+GSM2132423	Control	67	6.96	AnCg	Control	M	15	M
+GSM2132428	Control	58	7.02	AnCg	Control	M	26	M
+GSM2132429	Control	63	6.88	AnCg	Control	M	24.5	M
+GSM2132431	Control	58	7.02	nAcc	Control	M	26	M
+GSM2132433	Control	45	7.05	DLPFC	Control	F	16	F
+GSM2132435	Control	48	6.79	nAcc	Control	M	20.2	M
+GSM2132437	Control	45	7.05	AnCg	Control	F	16	F
+GSM2132438	Control	66	6.94	AnCg	Control	M	18	M
+GSM2132439	Control	48	6.79	AnCg	Control	M	20.2	M
+GSM2132440	Control	70	6.9	DLPFC	Control	F	20.5	F
+GSM2132455	Control	40	7.07	AnCg	Control	M	36.5	M
+GSM2132459	Control	39	6.81	DLPFC	Control	M	18.15	M
+GSM2132462	Control	39	7.02	DLPFC	Control	M	30	M
+GSM2132464	Control	64	6.83	AnCg	Control	F	19.25	F
+GSM2132468	Control	43	7.1	AnCg	Control	M	26	M
+GSM2132472	Control	56	6.98	nAcc	Control	M	24.5	M
+GSM2132202	MD	58	6.93	AnCg	Major Depression	M	24	M
+GSM2132204	MD	49	7.19	AnCg	Major Depression	M	27	M
+GSM2132214	MD	48	6.95	DLPFC	Major Depression	F	37	F
+GSM2132215	MD	46	6.91	DLPFC	Major Depression	M	27	M
+GSM2132218	MD	19	7.06	AnCg	Major Depression	M	30	M
+GSM2132219	MD	40	6.99	AnCg	Major Depression	M	24	M
+GSM2132229	MD	66	7.05	DLPFC	Major Depression	M	32	M
+GSM2132230	MD	44	7.06	DLPFC	Major Depression	F	25	F
+GSM2132231	MD	56	6.9	DLPFC	Major Depression	M	13	M
+GSM2132232	MD	40	6.99	DLPFC	Major Depression	M	24	M
+GSM2132240	MD	19	7.06	nAcc	Major Depression	M	30	M
+GSM2132246	MD	19	7.11	nAcc	Major Depression	M	18	M
+GSM2132248	MD	56	6.9	nAcc	Major Depression	M	13	M
+GSM2132250	MD	50	6.84	nAcc	Major Depression	M	30.8	M
+GSM2132251	MD	24	7.16	nAcc	Major Depression	M	25.3	M
+GSM2132266	MD	39	6.79	AnCg	Major Depression	M	27.5	M
+GSM2132267	MD	44	7.06	AnCg	Major Depression	F	25	F
+GSM2132272	MD	39	6.79	DLPFC	Major Depression	M	27.5	M
+GSM2132273	MD	52	6.82	DLPFC	Major Depression	M	16	M
+GSM2132280	MD	44	7.06	nAcc	Major Depression	F	25	F
+GSM2132281	MD	46	7.39	nAcc	Major Depression	F	7.6	F
+GSM2132282	MD	48	6.95	nAcc	Major Depression	F	37	F
+GSM2132283	MD	39	6.79	nAcc	Major Depression	M	27.5	M
+GSM2132286	MD	46	7.39	DLPFC	Major Depression	F	7.6	F
+GSM2132289	MD	56	6.9	AnCg	Major Depression	M	13	M
+GSM2132291	MD	47	7.25	AnCg	Major Depression	M	29	M
+GSM2132292	MD	49	7	nAcc	Major Depression	M	31	M
+GSM2132294	MD	63	7.17	nAcc	Major Depression	M	28.5	M
+GSM2132298	MD	63	7.17	DLPFC	Major Depression	M	28.5	M
+GSM2132300	MD	46	6.91	AnCg	Major Depression	M	27	M
+GSM2132306	MD	28	7.07	nAcc	Major Depression	M	26.5	M
+GSM2132314	MD	66	7.05	AnCg	Major Depression	M	32	M
+GSM2132315	MD	39	7.18	AnCg	Major Depression	M	29	M
+GSM2132323	MD	39	7.18	DLPFC	Major Depression	M	29	M
+GSM2132326	MD	28	7.07	AnCg	Major Depression	M	26.5	M
+GSM2132329	MD	49	7.19	nAcc	Major Depression	M	27	M
+GSM2132331	MD	72	7.13	nAcc	Major Depression	F	21	F
+GSM2132335	MD	24	7.16	DLPFC	Major Depression	M	25.3	M
+GSM2132346	MD	46	6.76	AnCg	Major Depression	F	28	F
+GSM2132349	MD	52	6.82	AnCg	Major Depression	M	16	M
+GSM2132350	MD	53	7.16	nAcc	Major Depression	F	19.5	F
+GSM2132354	MD	50	6.84	DLPFC	Major Depression	M	30.8	M
+GSM2132356	MD	58	6.93	DLPFC	Major Depression	M	24	M
+GSM2132357	MD	72	7.13	DLPFC	Major Depression	F	21	F
+GSM2132362	MD	47	7.25	nAcc	Major Depression	M	29	M
+GSM2132363	MD	34	7.13	nAcc	Major Depression	M	27.5	M
+GSM2132371	MD	24	7.16	AnCg	Major Depression	M	25.3	M
+GSM2132380	MD	19	7.11	DLPFC	Major Depression	M	18	M
+GSM2132381	MD	49	7.19	DLPFC	Major Depression	M	27	M
+GSM2132383	MD	63	7.17	AnCg	Major Depression	M	28.5	M
+GSM2132384	MD	46	7.39	AnCg	Major Depression	F	7.6	F
+GSM2132393	MD	49	7	DLPFC	Major Depression	M	31	M
+GSM2132395	MD	53	7.16	AnCg	Major Depression	F	19.5	F
+GSM2132397	MD	19	7.11	AnCg	Major Depression	M	18	M
+GSM2132400	MD	58	6.93	nAcc	Major Depression	M	24	M
+GSM2132410	MD	46	6.76	nAcc	Major Depression	F	28	F
+GSM2132412	MD	46	6.76	DLPFC	Major Depression	F	28	F
+GSM2132413	MD	53	7.16	DLPFC	Major Depression	F	19.5	F
+GSM2132415	MD	49	7	AnCg	Major Depression	M	31	M
+GSM2132416	MD	50	6.84	AnCg	Major Depression	M	30.8	M
+GSM2132418	MD	72	7.13	AnCg	Major Depression	F	21	F
+GSM2132419	MD	39	7.18	nAcc	Major Depression	M	29	M
+GSM2132427	MD	34	7.13	AnCg	Major Depression	M	27.5	M
+GSM2132442	MD	66	7.05	nAcc	Major Depression	M	32	M
+GSM2132446	MD	47	7.25	DLPFC	Major Depression	M	29	M
+GSM2132453	MD	48	6.95	AnCg	Major Depression	F	37	F
+GSM2132456	MD	28	7.07	DLPFC	Major Depression	M	26.5	M
+GSM2132461	MD	19	7.06	DLPFC	Major Depression	M	30	M
+GSM2132474	MD	40	6.99	nAcc	Major Depression	M	24	M
+GSM2132205	Schizophrenia	31	6.77	nAcc	Schizophrenia	F	22	F
+GSM2132208	Schizophrenia	53	6.78	nAcc	Schizophrenia	F	34	F
+GSM2132220	Schizophrenia	35	6.61	AnCg	Schizophrenia	M	26.5	M
+GSM2132221	Schizophrenia	39	6.71	AnCg	Schizophrenia	M	19	M
+GSM2132222	Schizophrenia	36	6.82	AnCg	Schizophrenia	M	11.2	M
+GSM2132223	Schizophrenia	26	6.68	AnCg	Schizophrenia	M	21.1	M
+GSM2132234	Schizophrenia	35	6.61	DLPFC	Schizophrenia	M	26.5	M
+GSM2132242	Schizophrenia	52	6.89	DLPFC	Schizophrenia	M	23.5	M
+GSM2132244	Schizophrenia	55	6.96	DLPFC	Schizophrenia	M	12	M
+GSM2132247	Schizophrenia	63	7.02	nAcc	Schizophrenia	M	30	M
+GSM2132252	Schizophrenia	58	6.59	nAcc	Schizophrenia	F	27.3	F
+GSM2132253	Schizophrenia	26	6.68	nAcc	Schizophrenia	M	21.1	M
+GSM2132256	Schizophrenia	34	6.7	nAcc	Schizophrenia	M	17.2	M
+GSM2132261	Schizophrenia	44	7.21	nAcc	Schizophrenia	M	24	M
+GSM2132265	Schizophrenia	45	7.05	DLPFC	Schizophrenia	M	20	M
+GSM2132271	Schizophrenia	39	6.71	nAcc	Schizophrenia	M	19	M
+GSM2132276	Schizophrenia	50	6.55	AnCg	Schizophrenia	M	17.8	M
+GSM2132279	Schizophrenia	42	7.04	AnCg	Schizophrenia	M	8.5	M
+GSM2132296	Schizophrenia	36	6.82	DLPFC	Schizophrenia	M	11.2	M
+GSM2132303	Schizophrenia	24	6.87	AnCg	Schizophrenia	M	33.5	M
+GSM2132308	Schizophrenia	26	6.68	DLPFC	Schizophrenia	M	21.1	M
+GSM2132313	Schizophrenia	58	6.59	AnCg	Schizophrenia	F	27.3	F
+GSM2132319	Schizophrenia	43	6.6	nAcc	Schizophrenia	M	14.7	M
+GSM2132321	Schizophrenia	48	6.93	DLPFC	Schizophrenia	M	27	M
+GSM2132324	Schizophrenia	48	6.93	AnCg	Schizophrenia	M	27	M
+GSM2132325	Schizophrenia	34	6.7	AnCg	Schizophrenia	M	17.2	M
+GSM2132327	Schizophrenia	31		AnCg	Schizophrenia	M	23.5	M
+GSM2132340	Schizophrenia	36	7.12	nAcc	Schizophrenia	M	44.25	M
+GSM2132341	Schizophrenia	24	6.87	nAcc	Schizophrenia	M	33.5	M
+GSM2132342	Schizophrenia	40	6.9	nAcc	Schizophrenia	M	14.5	M
+GSM2132343	Schizophrenia	50	6.81	DLPFC	Schizophrenia	M	6.25	M
+GSM2132344	Schizophrenia	31	6.77	DLPFC	Schizophrenia	F	22	F
+GSM2132345	Schizophrenia	34	6.7	DLPFC	Schizophrenia	M	17.2	M
+GSM2132347	Schizophrenia	39	6.83	AnCg	Schizophrenia	M	7.5	M
+GSM2132355	Schizophrenia	44	7.21	DLPFC	Schizophrenia	M	24	M
+GSM2132360	Schizophrenia	50	6.81	AnCg	Schizophrenia	M	6.25	M
+GSM2132361	Schizophrenia	43	6.6	AnCg	Schizophrenia	M	14.7	M
+GSM2132365	Schizophrenia	35	6.61	nAcc	Schizophrenia	M	26.5	M
+GSM2132366	Schizophrenia	63	7.02	DLPFC	Schizophrenia	M	30	M
+GSM2132369	Schizophrenia	43	6.6	DLPFC	Schizophrenia	M	14.7	M
+GSM2132373	Schizophrenia	44	7.21	AnCg	Schizophrenia	M	24	M
+GSM2132375	Schizophrenia	45	7.05	nAcc	Schizophrenia	M	20	M
+GSM2132394	Schizophrenia	45	7.05	AnCg	Schizophrenia	M	20	M
+GSM2132396	Schizophrenia	36	7.12	AnCg	Schizophrenia	M	44.25	M
+GSM2132398	Schizophrenia	48	6.93	nAcc	Schizophrenia	M	27	M
+GSM2132399	Schizophrenia	31		nAcc	Schizophrenia	M	23.5	M
+GSM2132403	Schizophrenia	24	6.87	DLPFC	Schizophrenia	M	33.5	M
+GSM2132405	Schizophrenia	58	6.59	DLPFC	Schizophrenia	F	27.3	F
+GSM2132407	Schizophrenia	55	6.96	AnCg	Schizophrenia	M	12	M
+GSM2132408	Schizophrenia	31	6.77	AnCg	Schizophrenia	F	22	F
+GSM2132409	Schizophrenia	63	7.02	AnCg	Schizophrenia	M	30	M
+GSM2132414	Schizophrenia	40	6.9	DLPFC	Schizophrenia	M	14.5	M
+GSM2132420	Schizophrenia	42	7.04	nAcc	Schizophrenia	M	8.5	M
+GSM2132421	Schizophrenia	50	6.55	nAcc	Schizophrenia	M	17.8	M
+GSM2132432	Schizophrenia	50	6.64	AnCg	Schizophrenia	M	25.7	M
+GSM2132434	Schizophrenia	39	6.71	DLPFC	Schizophrenia	M	19	M
+GSM2132436	Schizophrenia	50	6.55	DLPFC	Schizophrenia	M	17.8	M
+GSM2132441	Schizophrenia	40	6.9	AnCg	Schizophrenia	M	14.5	M
+GSM2132443	Schizophrenia	52	6.89	AnCg	Schizophrenia	M	23.5	M
+GSM2132452	Schizophrenia	50	6.64	DLPFC	Schizophrenia	M	25.7	M
+GSM2132457	Schizophrenia	31		DLPFC	Schizophrenia	M	23.5	M
+GSM2132458	Schizophrenia	42	7.04	DLPFC	Schizophrenia	M	8.5	M
+GSM2132460	Schizophrenia	53	6.78	DLPFC	Schizophrenia	F	34	F
+GSM2132466	Schizophrenia	50	6.81	nAcc	Schizophrenia	M	6.25	M
+GSM2132467	Schizophrenia	39	6.83	DLPFC	Schizophrenia	M	7.5	M
+GSM2132469	Schizophrenia	53	6.78	AnCg	Schizophrenia	F	34	F
+GSM2132471	Schizophrenia	36	7.12	DLPFC	Schizophrenia	M	44.25	M
+GSM2132477	Schizophrenia	36	6.82	nAcc	Schizophrenia	M	11.2	M
+GSM2132478	Schizophrenia	52	6.89	nAcc	Schizophrenia	M	23.5	M
+GSM2132479	Schizophrenia	50	6.64	nAcc	Schizophrenia	M	25.7	M
+GSM2132480	Schizophrenia	55	6.96	nAcc	Schizophrenia	M	12	M
