@@ -47,6 +47,23 @@ The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so 
    - `run_metadata.json` captures runtime provenance for reproducibility.
    - Open `GSE125583/index.html` (or the corresponding `index.html` for your study) to explore volcano/MA plots, QC summaries, and evidence tables.
 
+### Group Reference — `--group_ref`
+
+`--group_ref` accepts a comma-separated priority list that determines which level(s) are treated as the reference (control) when ERAPID assembles contrasts. Every log₂ fold change, RNK score, FGSEA enrichment plot, and meta-summary is interpreted as **test vs. reference**, so setting this flag correctly is critical for downstream conclusions.
+
+How it works:
+- The pipeline scans the list from left to right. For each entry that exists in the `group_col`, ERAPID relevels the factor so that entry becomes the denominator.
+- Two-level design (`Control` vs. `Treated`): `--group_ref Control` or `--group_ref Control,Treated` ensures positive log₂ fold changes indicate genes higher in `Treated` relative to `Control`.
+- Multi-level design (e.g., `Control`, `MD`, `AD`): `--group_ref Control,MD` first generates contrasts `MD vs Control` and `AD vs Control`. Because `MD` was listed second, ERAPID then produces `AD vs MD`, keeping `MD` as reference for that specific comparison.
+- If a listed level is absent in the data, ERAPID skips it and falls back to the first matching level (or auto-detects typical control labels). If nothing matches, it defaults to the first factor level in `group_col`.
+
+Practical tips:
+- Double-check the exact spelling/case in your curated coldata (`Control` ≠ `control`).
+- Include all expected control-like groups in descending priority: e.g. `--group_ref Control,Vehicle,Baseline`.
+- When building meta-analyses, reuse the same `--group_ref` so directions align across studies.
+
+If results appear “flipped” (e.g., known control genes show positive log₂ fold change), revisit your `--group_ref` setting first.
+
 ## Meta-analysis Examples
 
 Aggregate previously analyzed studies to highlight shared signatures:
@@ -116,23 +133,6 @@ python erapid.py \
 - `--group_ref`: sets contrast orientation; see [Group Reference](#group-reference---group_ref) for details.
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
 - `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
-
-### Group Reference — `--group_ref`
-
-`--group_ref` accepts a comma-separated priority list that determines which level(s) are treated as the reference (control) when ERAPID assembles contrasts. Every log₂ fold change, RNK score, FGSEA enrichment plot, and meta-summary is interpreted as **test vs. reference**, so setting this flag correctly is critical for downstream conclusions.
-
-How it works:
-- The pipeline scans the list from left to right. For each entry that exists in the `group_col`, ERAPID relevels the factor so that entry becomes the denominator.
-- Two-level design (`Control` vs. `Treated`): `--group_ref Control` or `--group_ref Control,Treated` ensures positive log₂ fold changes indicate genes higher in `Treated` relative to `Control`.
-- Multi-level design (e.g., `Control`, `MD`, `AD`): `--group_ref Control,MD` first generates contrasts `MD vs Control` and `AD vs Control`. Because `MD` was listed second, ERAPID then produces `AD vs MD`, keeping `MD` as reference for that specific comparison.
-- If a listed level is absent in the data, ERAPID skips it and falls back to the first matching level (or auto-detects typical control labels). If nothing matches, it defaults to the first factor level in `group_col`.
-
-Practical tips:
-- Double-check the exact spelling/case in your curated coldata (`Control` ≠ `control`).
-- Include all expected control-like groups in descending priority: e.g. `--group_ref Control,Vehicle,Baseline`.
-- When building meta-analyses, reuse the same `--group_ref` so directions align across studies.
-
-If results appear “flipped” (e.g., known control genes show positive log₂ fold change), revisit your `--group_ref` setting first.
 
 For a complete list of arguments, run:
 
