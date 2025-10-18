@@ -2450,6 +2450,7 @@ def main(argv=None) -> int:
     ap.add_argument("--plot_top_n", type=int, default=1000, help="Number of smallest-p points to make interactive in Volcano/MA (default 1000)")
     ap.add_argument("--deg_sens_topn", type=int, default=100, help="Top-N genes to compare in sensitivity analysis (default 100)")
     ap.add_argument("--deg_lfc_thresh", type=float, default=0.585, help="Absolute log2 fold-change cutoff used for DEG flagging (default 0.585)")
+    ap.add_argument("--deg_padj_thresh", type=float, default=0.05, help="Adjusted p-value cutoff used for DEG flagging (default 0.05)")
     args = ap.parse_args(argv)
 
     os.makedirs(args.outdir, exist_ok=True)

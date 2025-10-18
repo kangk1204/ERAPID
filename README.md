@@ -28,12 +28,14 @@ The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so 
      --group_ref Control \
      --deg_method both \
      --evidence_keywords alzheimer,amyloid
-   ```
+  ```
    - Reads the curated coldata, executes DESeq2 and/or dream (`--deg_method`), and launches FGSEA on ranked features.
    - Optional flags:
      - `--auto_batch_cols` to auto-include common covariates (sex/age/tissue) in the design.
      - `--batch_cols age,sex` for an explicit formula.
-     - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
+     - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
+     - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
+      - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
 
 3. **Inspect results**
    - Differential expression tables (`02_DEG/`), FGSEA outputs (`03_GSEA/`), and HTML dashboards are written inside the GSE directory.
@@ -106,6 +108,8 @@ python erapid.py \
 - `--seed`: set an R random seed for reproducibility.
 - `--no_interactive_plots`: skip HTML volcano/MA plots when running headless.
 - `--force_evidence` / `--evidence_top_n`: control the evidence-gathering stage for prioritized genes.
+- `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
+- `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
 
 For a complete list of arguments, run:
 

@@ -1091,7 +1091,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             print("[warn] Matplotlib is required to render the UpSet plot; skipping plot. Install with 'pip install matplotlib'.")
             upset_available = False
 
-    PADJ_THRESH = 0.05
+    PADJ_THRESH = float(args.deg_padj_thresh if args.deg_padj_thresh is not None else 0.05)
     LFC_THRESH = float(args.deg_lfc_thresh if args.deg_lfc_thresh is not None else 0.585)
 
     method_alias = (args.method or args.deg_method or "both").lower()
@@ -2849,6 +2849,7 @@ def main(argv=None) -> int:
     ap.add_argument("--phase", choices=["prepare", "analyze", "meta"], default="prepare", help="prepare=download data and build editable coldata; analyze=run DEG/FGSEA assuming group labels are curated; meta=aggregate existing DEG outputs across multiple GSEs")
     ap.add_argument("--deg_method", choices=["deseq2", "dream", "both"], default="both", help="Differential expression engine: 'deseq2', 'dream', or run both sequentially (default)")
     ap.add_argument("--deg_lfc_thresh", type=float, default=0.585, help="Absolute log2 fold-change cutoff applied to DEG calling for both DESeq2 and dream (default: 0.585)")
+    ap.add_argument("--deg_padj_thresh", type=float, default=0.05, help="Adjusted p-value cutoff applied to DEG calling for DESeq2, dream, and meta analyses (default: 0.05)")
     ap.add_argument("--method", choices=["deseq2", "dream", "both"], help="Meta-analysis mode (--phase meta). Defaults to --deg_method when unspecified.")
     ap.add_argument("--out", default="", help="Output directory for meta-analysis results (--phase meta)")
     ap.add_argument("--batch_cols", default="", help="Explicit comma-separated batch covariates for DESeq2 design (overrides auto)")
@@ -2869,6 +2870,7 @@ def main(argv=None) -> int:
     ap.add_argument("--rscript", default="", help="Path to Rscript for 02/03 scripts (optional)")
     ap.add_argument("--no_interactive_plots", action="store_true", help="Disable interactive HTML plots (volcano/MA) during DEG")
     ap.add_argument("--deseq2_min_samples", type=int, default=0, help="Minimum sample count required for DESeq2 prefilter; <=0 uses ceil(n/2)")
+    ap.add_argument("--deseq2_min_count", type=int, default=10, help="Minimum raw count threshold for DESeq2 prefilter (default: 10)")
     ap.add_argument("--coldata", default="", help="Explicit path to coldata TSV to use (treat as configuration; skips phenotype step)")
     ap.add_argument("--skip_download", action="store_true")
     ap.add_argument("--evidence_keywords", default="", help="Comma-separated keywords for evidence aggregation (passes to 03_deg_evidence.py)")
@@ -3616,6 +3618,8 @@ def main(argv=None) -> int:
                            "--group_col", args.group_col,
                            "--group_ref", args.group_ref,
                            "--outdir", deg_dir]
+                if args.deseq2_min_count is not None:
+                    deg_cmd += ["--min_count", str(int(args.deseq2_min_count))]
                 if min_samples_half:
                     deg_cmd += ["--min_samples", str(min_samples_half)]
                 if tpm_path:
@@ -3638,6 +3642,8 @@ def main(argv=None) -> int:
                     deg_cmd += ["--seed", str(args.seed)]
                 if args.deg_lfc_thresh is not None:
                     deg_cmd += ["--deg_lfc_thresh", str(args.deg_lfc_thresh)]
+                if args.deg_padj_thresh is not None:
+                    deg_cmd += ["--deg_padj_thresh", str(args.deg_padj_thresh)]
                 if args.rscript:
                     deg_cmd += ["--rscript", args.rscript]
                 else:
@@ -3675,9 +3681,11 @@ def main(argv=None) -> int:
                     "auto_batch_cols_used": auto_batch_used,
                     "auto_batch_candidates_available": auto_batch_candidates,
                     "seed": args.seed,
+                    "deg_padj_thresh": args.deg_padj_thresh,
                     'evidence_keywords': evidence_keywords,
                     'evidence_top_n': args.evidence_top_n,
                     'force_evidence': bool(args.force_evidence),
+                    "prefilter_min_count": args.deseq2_min_count,
                     "prefilter_min_samples": min_samples_half,
                     "prefilter_sample_count": sample_count,
                     "deg_command": deg_cmd,
@@ -3856,6 +3864,8 @@ def main(argv=None) -> int:
                     dream_cmd += ["--seed", str(args.seed)]
                 if args.deg_lfc_thresh is not None:
                     dream_cmd += ["--deg_lfc_thresh", str(args.deg_lfc_thresh)]
+                if args.deg_padj_thresh is not None:
+                    dream_cmd += ["--deg_padj_thresh", str(args.deg_padj_thresh)]
                 if args.rscript:
                     dream_cmd += ["--rscript", args.rscript]
                 else:
@@ -3906,9 +3916,11 @@ def main(argv=None) -> int:
                     "dream_test_interaction": bool(args.dream_test_interaction),
                     "sample_col": sample_col,
                     "seed": args.seed,
+                    "deg_padj_thresh": args.deg_padj_thresh,
                     'evidence_keywords': evidence_keywords,
                     'evidence_top_n': args.evidence_top_n,
                     'force_evidence': bool(args.force_evidence),
+                    "prefilter_min_count": args.dream_min_count,
                     "prefilter_min_samples": dream_min_samples,
                     "prefilter_sample_count": sample_count_dream,
                     "deg_command": dream_cmd,
@@ -4070,7 +4082,7 @@ const payload = `{esc(payload)}`;
                 gse=gse,
                 group_col=args.group_col,
                 methods_ran=deg_methods_ran,
-                padj_thresh=0.05,
+                padj_thresh=float(args.deg_padj_thresh if args.deg_padj_thresh is not None else 0.05),
                 lfc_thresh=float(args.deg_lfc_thresh if args.deg_lfc_thresh is not None else 0.585),
                 dt_page_len=_DT_PAGELEN,
                 dt_length_menu=args.dt_length_menu,

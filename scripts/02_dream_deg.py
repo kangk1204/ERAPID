@@ -154,6 +154,8 @@ def build_r_script(args) -> str:
         f"fixed_terms <- {_r_vec(fixed_terms)}",
         f"random_terms <- {_r_vec(random_terms)}",
         f"region_specific_groups <- {_r_vec(region_specific_groups)}",
+        f"deg_lfc_thresh <- as.numeric({args.deg_lfc_thresh if args.deg_lfc_thresh is not None else 0.585})",
+        f"deg_padj_thresh <- as.numeric({args.deg_padj_thresh if args.deg_padj_thresh is not None else 0.05})",
     ])
 
     r_parts.append(textwrap.dedent(
@@ -1629,7 +1631,7 @@ def build_r_script(args) -> str:
 
         deg_summary_rows <- list()
         contrast_records <- list()
-        padj_threshold <- 0.05
+        padj_threshold <- if (exists('deg_padj_thresh') && is.finite(deg_padj_thresh)) as.numeric(deg_padj_thresh) else 0.05
         lfc_threshold <- if (exists('deg_lfc_thresh') && is.finite(deg_lfc_thresh)) as.numeric(deg_lfc_thresh) else 0.585
         heatmap_top_n <- 100L
 
@@ -1939,6 +1941,7 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument('--append_norm_means', action='store_true', help='Append per-group TPM means when TPM provided')
     ap.add_argument('--seed', type=int, help='Random seed for reproducibility')
     ap.add_argument('--deg_lfc_thresh', type=float, default=0.585, help='Absolute log2 fold-change cutoff used for DEG flagging (default: 0.585)')
+    ap.add_argument('--deg_padj_thresh', type=float, default=0.05, help='Adjusted p-value cutoff used for DEG flagging (default: 0.05)')
     ap.add_argument('--outdir', required=True, help='Output directory (will be created)')
     ap.add_argument('--rscript', help='Path to Rscript executable')
     ap.add_argument('--r_conda_prefix', help='Conda prefix for R libraries (override)')
