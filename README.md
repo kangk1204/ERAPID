@@ -13,13 +13,16 @@ The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so 
 ## Standard Workflow
 
 1. **Prepare phase – download counts and curate sample groups**
+
    ```bash
    python erapid.py --gse GSE125583
    ```
+
    - Creates `GSE125583/` with `01_GEO_data/`, an editable `GSE125583_coldata_for_edit.tsv`, and heuristic grouping suggestions under `GSE125583__group_selection_suggestions.txt`.
    - Review the TSV and populate `group_primary` (plus optional covariates) before continuing.
 
 2. **Analyze phase – run DESeq2/dream and FGSEA**
+
    ```bash
    python erapid.py \
      --gse GSE125583 \
@@ -28,7 +31,8 @@ The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so 
      --group_ref Control \
      --deg_method both \
      --evidence_keywords alzheimer,amyloid
-  ```
+   ```
+
    - Reads the curated coldata, executes DESeq2 and/or dream (`--deg_method`), and launches FGSEA on ranked features.
    - Optional flags:
      - `--auto_batch_cols` to auto-include common covariates (sex/age/tissue) in the design.
@@ -36,7 +40,7 @@ The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so 
      - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
      - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
      - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference---group_ref) for detailed behavior and examples.
-      - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
+     - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
 
 3. **Inspect results**
    - Differential expression tables (`02_DEG/`), FGSEA outputs (`03_GSEA/`), and HTML dashboards are written inside the GSE directory.
