@@ -60,7 +60,7 @@ How it works:
 Practical tips:
 - Double-check the exact spelling/case in your curated coldata (`Control` ≠ `control`).
 - Include all expected control-like groups in descending priority: e.g. `--group_ref Control,Vehicle,Baseline`.
-- When building meta-analyses, reuse the same `--group_ref` so directions align across studies.
+- Meta analysis reads whatever orientation you established during the analyze phase; it does not re-level groups. Re-run analyze with the desired `--group_ref` before aggregating if you need to change directionality.
 
 If results appear “flipped” (e.g., known control genes show positive log₂ fold change), revisit your `--group_ref` setting first.
 
