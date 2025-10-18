@@ -139,5 +139,3 @@ For a complete list of arguments, run:
 ```bash
 python erapid.py --help
 ```
-
-Keep README updates in sync with new CLI features before publishing to GitHub. Contributions should retain English comments/docstrings so collaborators understand the workflow on review.
