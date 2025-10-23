@@ -1,7 +1,7 @@
 # ERAPID GEO RNA-seq Pipeline
 
 <p align="center">
-  <img src="assets/graphical_abstract.jpg" alt="ERAPID pipeline overview" width="820">
+  <img src="assets/graphical_abstract.svg" alt="ERAPID pipeline overview" width="820">
 </p>
 
 `erapid.py` orchestrates an end-to-end RNA-seq workflow for public GEO studies (GSE accessions). The CLI guides you through the same sequence of steps used internally by ERAPID: download/public data cleanup, differential expression, enrichment analysis, and optional evidence aggregation. A third *meta* phase can summarise overlapping signals across multiple GSE runs for manuscript-ready tables and plots.
