@@ -2,13 +2,58 @@
 
 `erapid.py` orchestrates an end-to-end RNA-seq workflow for public GEO studies (GSE accessions). The CLI guides you through the same sequence of steps used internally by ERAPID: download/public data cleanup, differential expression, enrichment analysis, and optional evidence aggregation. A third *meta* phase can summarise overlapping signals across multiple GSE runs for manuscript-ready tables and plots.
 
-## Prerequisites
+## Quickstart
 
-- Python 3.9+ with the packages listed in `environment.yml` (use `conda env create -f environment.yml` if you prefer a managed environment).
-- R with `DESeq2`, `variancePartition`, `fgsea`, `msigdbr`, and related tidyverse dependencies accessible as `Rscript` (override with `--rscript` if needed).
-- `curl` (or HTTPS-enabled Python) for GEO downloads.
+The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or a Unix‑like environment.
 
-The CLI autodetects helper scripts in `scripts/` or existing `GSE*` folders, so you can run the pipeline from the repo root without additional configuration.
+1. **Clone the repo and create the Conda environment**  
+   ```bash
+   git clone https://github.com/kangk1204/ERAPID.git
+   cd ERAPID
+   conda env create -f environment.yml
+   conda activate erapid
+   ```
+
+2. **Check that R and the required packages are available**  
+   ```bash
+   Rscript -e 'pkgs <- c("DESeq2","variancePartition","fgsea","msigdbr"); \
+               missing <- pkgs[!sapply(pkgs, requireNamespace, quietly=TRUE)]; \
+               if (length(missing)) { \
+                 cat("Missing packages:", paste(missing, collapse=", "), "\n"); \
+                 quit(save="no", status=1); \
+               } else { \
+                 cat("All packages available.\\n"); \
+               }'
+   ```
+   If you see “Missing packages…”, install them once via:  
+   `Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("DESeq2","variancePartition","fgsea","msigdbr"))'`
+
+3. **Run a quick test (prepare → analyze)**  
+   ```bash
+   python erapid.py --gse GSE125583           # prepare phase (downloads data + editable metadata)
+   python erapid.py --gse GSE125583 --phase analyze --group_col group_primary --group_ref Control
+   ```
+   This creates `GSE125583/` with DEG, FGSEA, and dashboard outputs under `02_DEG/` and `03_GSEA/`.
+
+4. **Open the dashboard**  
+   ```bash
+   xdg-open GSE125583/index.html       # Linux/WSL
+   open GSE125583/index.html           # macOS
+   ```
+
+5. **(Optional) Meta-analysis across prior runs**  
+   ```bash
+   python erapid.py --phase meta \
+     --gse GSE104704,GSE125583,GSE153873 \
+     --group_col group_primary \
+     --out meta_results
+   ```
+   Open `meta_results/index.html` to explore overlap, evidence summaries, and downloads.
+
+**Dependencies recap**
+- Conda (Python 3.9+) with packages defined in `environment.yml`
+- R ≥ 4.3 with the Bioconductor/Tidyverse libraries above
+- `curl` (or HTTPS-enabled Python) for GEO downloads
 
 ## Standard Workflow
 
