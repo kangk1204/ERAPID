@@ -16,14 +16,7 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
 
 2. **Check that R and the required packages are available**  
    ```bash
-   Rscript -e 'pkgs <- c("DESeq2","variancePartition","fgsea","msigdbr"); \
-               missing <- pkgs[!sapply(pkgs, requireNamespace, quietly=TRUE)]; \
-               if (length(missing)) { \
-                 cat("Missing packages:", paste(missing, collapse=", "), "\n"); \
-                 quit(save="no", status=1); \
-               } else { \
-                 cat("All packages available.\\n"); \
-               }'
+   Rscript -e 'pkgs <- c("DESeq2","variancePartition","fgsea","msigdbr"); missing <- pkgs[!sapply(pkgs, requireNamespace, quietly=TRUE)]; if (length(missing)) { cat("Missing packages:", paste(missing, collapse=", "), "\n"); quit(save="no", status=1); } else { cat("All packages available.\\n"); }'
    ```
    If you see “Missing packages…”, install them once via:  
    `Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("DESeq2","variancePartition","fgsea","msigdbr"))'`
