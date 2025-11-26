@@ -2468,7 +2468,8 @@ def _generate_common_heatmap(
         if gid in expr_df.index:
             gene_ids.append(gid)
     gene_ids = gene_ids[:max_genes]
-    if len(gene_ids) < 2:
+    # Allow a single common gene to render a 1-row heatmap for completeness.
+    if len(gene_ids) < 1:
         return None
 
     expr_df = expr_df.loc[gene_ids]

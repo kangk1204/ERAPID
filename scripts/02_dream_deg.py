@@ -257,15 +257,31 @@ def build_r_script(args) -> str:
           stop('Duplicate sample IDs in metadata: ', paste(dup, collapse=', '))
         }
 
-        sample_ids <- colnames(counts_mat)
-        m_idx <- safe_match(sample_ids, coldata[[sample_col]])
-        if (any(is.na(m_idx))) {
-          missing <- paste(sample_ids[is.na(m_idx)], collapse=', ')
-          stop('Samples absent from metadata after ID harmonization: ', missing)
+        counts_ids <- colnames(counts_mat)
+        meta_ids_all <- coldata[[sample_col]]
+        idx_counts_to_meta <- safe_match(counts_ids, meta_ids_all)
+        idx_meta_to_counts <- safe_match(meta_ids_all, counts_ids)
+        dropped_counts <- which(is.na(idx_counts_to_meta))
+        if (length(dropped_counts) > 0) {
+          message('[warn] Dropping ', length(dropped_counts), ' count columns not present in coldata (using coldata as configuration)')
         }
-        coldata <- coldata[m_idx, , drop=FALSE]
+        missing_meta <- which(is.na(idx_meta_to_counts))
+        if (length(missing_meta) > 0) {
+          message('[warn] ', length(missing_meta), ' coldata rows not present in counts (will be ignored)')
+        }
+        keep_meta <- setdiff(seq_along(meta_ids_all), missing_meta)
+        if (length(keep_meta) < 2) {
+          stop('Insufficient overlap between counts and coldata (n=', length(keep_meta), ')')
+        }
+        if (length(missing_meta) > 0) {
+          coldata <- coldata[keep_meta, , drop=FALSE]
+          meta_ids_all <- meta_ids_all[keep_meta]
+          idx_meta_to_counts <- idx_meta_to_counts[keep_meta]
+        }
+        aligned_ids <- counts_ids[idx_meta_to_counts]
+        coldata[[sample_col]] <- aligned_ids
+        counts_mat <- counts_mat[, idx_meta_to_counts, drop=FALSE]
         rownames(coldata) <- coldata[[sample_col]]
-
         if (!identical(colnames(counts_mat), rownames(coldata))) {
           stop('Counts matrix columns do not match metadata sample identifiers after alignment')
         }
