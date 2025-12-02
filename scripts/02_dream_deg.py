@@ -109,18 +109,30 @@ def build_r_script(args) -> str:
     )
     theme_css_chunks = _chunk_for_r(theme_css_raw, 512)
 
+    user_conda_prefix = _r_str(args.r_conda_prefix or "")
     r_parts = [
         "options(width=120)",
-        "conda_prefix <- Sys.getenv('CONDA_PREFIX')",
+        f"user_conda_prefix <- {user_conda_prefix}",
+        "conda_prefix <- user_conda_prefix",
+        "env_conda_prefix <- Sys.getenv('CONDA_PREFIX')",
+        "if (!nzchar(conda_prefix)) {",
+        "  conda_prefix <- env_conda_prefix",
+        "} else if (nzchar(env_conda_prefix) && env_conda_prefix != conda_prefix) {",
+        "  message('[info] Overriding CONDA_PREFIX from environment (\\'', env_conda_prefix, '\\') with --r_conda_prefix (\\'', conda_prefix, '\\')')",
+        "}",
         "if (nzchar(conda_prefix)) {",
+        "  Sys.setenv(CONDA_PREFIX = conda_prefix)",
         "  conda_lib <- file.path(conda_prefix, 'lib', 'R', 'library')",
         "  if (dir.exists(conda_lib)) {",
         "    Sys.setenv(R_LIBS_SITE='', R_LIBS_USER='')",
         "    .libPaths(conda_lib)",
+        "  } else {",
+        "    message('[warn] CONDA_PREFIX is set but library dir is missing: ', conda_lib)",
         "  }",
         "}",
         "message('[debug] R version: ', R.version.string)",
         "message('[debug] .libPaths(): ', paste(.libPaths(), collapse=':'))",
+        "message('[debug] Sys.getenv(CONDA_PREFIX): ', Sys.getenv('CONDA_PREFIX'))",
     ]
 
     r_parts.extend([

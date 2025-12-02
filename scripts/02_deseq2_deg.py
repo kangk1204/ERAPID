@@ -107,6 +107,7 @@ def build_r_script(args) -> str:
     s_coldata     = _r_str(args.coldata)
     s_annot       = _r_str(args.annot)
     s_outdir      = _r_str(args.outdir)
+    s_r_conda_pref= _r_str(getattr(args, 'r_conda_prefix', ''))
     s_gse         = _r_str(args.gse)
     s_group_col   = _r_str(args.group_col)
     s_batch_cols  = _r_str(args.batch_cols or '')
@@ -168,12 +169,22 @@ def build_r_script(args) -> str:
         """
     options(width=120)
     # Force conda R libraries to avoid mixing with system libs
-    conda_prefix <- Sys.getenv("CONDA_PREFIX")
+    user_conda_prefix <- """ + s_r_conda_pref + """
+    conda_prefix <- user_conda_prefix
+    env_conda_prefix <- Sys.getenv("CONDA_PREFIX")
+    if (!nzchar(conda_prefix)) {
+      conda_prefix <- env_conda_prefix
+    } else if (nzchar(env_conda_prefix) && env_conda_prefix != conda_prefix) {
+      message("[info] Overriding CONDA_PREFIX from environment ('", env_conda_prefix, "') with --r_conda_prefix ('", conda_prefix, "')")
+    }
     if (nzchar(conda_prefix)) {
+      Sys.setenv(CONDA_PREFIX = conda_prefix)
       conda_lib <- file.path(conda_prefix, "lib", "R", "library")
       if (dir.exists(conda_lib)) {
         Sys.setenv(R_LIBS_SITE="", R_LIBS_USER="")
         .libPaths(conda_lib)
+      } else {
+        message("[warn] CONDA_PREFIX is set but library dir is missing: ", conda_lib)
       }
     }
     message("[debug] R version:", R.version.string)
