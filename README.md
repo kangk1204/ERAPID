@@ -78,11 +78,15 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - Reads the curated coldata, executes DESeq2 and/or dream (`--deg_method`), and launches FGSEA on ranked features.
    - Optional flags:
      - `--auto_batch_cols` to auto-include common covariates (sex/age/tissue) in the design.
-     - `--batch_cols age,sex` for an explicit formula.
-     - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
-     - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
-     - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference---group_ref) for detailed behavior and examples.
-     - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
+   - `--batch_cols age,sex` for an explicit formula.
+   - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
+   - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
+   - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference---group_ref) for detailed behavior and examples.
+   - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
+   - Batch/SVA safety defaults (designed to avoid over-correction):
+     - `--sva_auto_skip_n 6` (default): n ≤ 6 → skip SVA entirely and use design-only.
+     - `--sva_corr_p_thresh 0.05` and `--sva_guard_cor_thresh 0.8`: SVs are dropped if they associate with group/known covariates/libsize/zero-fraction/QC at p < 0.05 or |cor| ≥ 0.8.
+     - dream auto-imports DESeq2 AUTO SVs when available; disable with `--no_auto_sv_from_deseq2`. The same guards apply.
 
 3. **Inspect results**
    - Differential expression tables (`02_DEG/`), FGSEA outputs (`03_GSEA/`), and HTML dashboards are written inside the GSE directory.
