@@ -132,6 +132,10 @@ def build_r_script(args) -> str:
         f"group_ref <- {_r_str(args.group_ref or '')}",
         f"sample_col <- {_r_str(args.sample_col)}",
         f"region_col <- {_r_str(args.region_col or '')}",
+        f"sva_corr_p_thresh <- {args.sva_corr_p_thresh}",
+        f"libsize_guard_cor_thresh <- {args.sva_guard_cor_thresh}",
+        f"sva_auto_skip_n <- as.integer({args.sva_auto_skip_n})",
+        f"auto_sv_from_deseq2 <- {'TRUE' if args.auto_sv_from_deseq2 else 'FALSE'}",
         f"numeric_center <- {'TRUE' if args.center_scale_numeric else 'FALSE'}",
         f"numeric_robust <- {'TRUE' if args.robust_scale_numeric else 'FALSE'}",
         f"min_count <- as.integer({args.min_count})",
@@ -385,6 +389,33 @@ def build_r_script(args) -> str:
           }
         }
 
+        # Surrogate variables: auto-import from DESeq2 AUTO if available and none specified
+        if (length(sv_cols) == 0 && isTRUE(auto_sv_from_deseq2)) {
+          cand <- file.path(outdir, paste0(gse_id, '__', group_col, '__auto_sva_SVs.tsv'))
+          alt  <- file.path(dirname(coldata_path), paste0(gse_id, '__', group_col, '__auto_sva_SVs.tsv'))
+          if (!file.exists(cand) && file.exists(alt)) cand <- alt
+          if (file.exists(cand)) {
+            message('[info] Auto-loading SVs from DESeq2: ', cand)
+            sv_auto <- try(readr::read_tsv(cand, progress=FALSE, show_col_types=FALSE), silent=TRUE)
+            if (!inherits(sv_auto, 'try-error') && 'gsm' %in% colnames(sv_auto)) {
+              sv_auto$gsm <- normalize_ids(sv_auto$gsm)
+              rownames(sv_auto) <- sv_auto$gsm
+              common_ids <- intersect(rownames(coldata), sv_auto$gsm)
+              if (length(common_ids) == nrow(coldata)) {
+                sv_auto <- sv_auto[rownames(coldata), , drop=FALSE]
+                sv_cols <- setdiff(colnames(sv_auto), 'gsm')
+                for (svn in sv_cols) {
+                  coldata[[svn]] <- sv_auto[[svn]]
+                }
+              } else {
+                message('[warn] SV auto-load skipped: sample IDs do not fully match coldata')
+              }
+            } else {
+              message('[warn] SV auto-load failed (no gsm column or read error): ', cand)
+            }
+          }
+        }
+
         # Surrogate variables: ensure factors
         if (length(sv_cols) > 0) {
           missing_sv <- sv_cols[!(sv_cols %in% colnames(coldata))]
@@ -394,6 +425,76 @@ def build_r_script(args) -> str:
             if (is.character(col)) coldata[[sv]] <- as.factor(col)
           }
           fixed_terms <- unique(c(fixed_terms, sv_cols))
+        }
+        # Guard against SVs duplicating group/covariates/libsize/zero-fraction
+        if (length(sv_cols) > 0) {
+          nsamp_auto <- nrow(coldata)
+          if (is.finite(sva_auto_skip_n) && sva_auto_skip_n > 0 && nsamp_auto <= sva_auto_skip_n) {
+            message('[warn] SV guard: sample count (', nsamp_auto, ') <= sva_auto_skip_n=', sva_auto_skip_n, '; dropping SV covariates')
+            sv_cols <- character(0)
+            fixed_terms <- setdiff(fixed_terms, sv_cols)
+          } else {
+            guard_df <- data.frame(SV=sv_cols, p_group=NA_real_, p_libsize=NA_real_, cor_libsize=NA_real_, p_zero_frac=NA_real_, cor_zero_frac=NA_real_)
+            libsize_vec <- colSums(counts_mat)
+            if (!is.null(names(libsize_vec))) libsize_vec <- libsize_vec[rownames(coldata)]
+            zero_frac_vec <- colMeans(counts_mat == 0)
+            cov_guard_terms <- setdiff(fixed_terms, sv_cols)
+            if (nzchar(region_col)) cov_guard_terms <- unique(c(cov_guard_terms, region_col))
+            for (i in seq_len(nrow(guard_df))) {
+              svname <- guard_df$SV[i]
+              sv <- coldata[[svname]]
+              df_guard <- data.frame(sv=sv, grp=coldata[[group_col]])
+              guard_df$p_group[i] <- tryCatch({
+                sm <- stats::aov(sv ~ grp, data=df_guard)
+                as.numeric(summary(sm)[[1]]["grp","Pr(>F)"])
+              }, error=function(e) NA_real_)
+              if (length(cov_guard_terms) > 0) {
+                for (vn in cov_guard_terms) {
+                  pcol <- paste0("p_", vn)
+                  if (!(pcol %in% colnames(guard_df))) guard_df[[pcol]] <- NA_real_
+                  x <- coldata[[vn]]
+                  guard_df[[pcol]][i] <- tryCatch({
+                    if (is.numeric(x)) {
+                      suppressWarnings(stats::cor.test(as.numeric(sv), x)$p.value)
+                    } else {
+                      sm <- stats::aov(sv ~ factor(x))
+                      as.numeric(summary(sm)[[1]][1, "Pr(>F)"])
+                    }
+                  }, error=function(e) NA_real_)
+                }
+              }
+              if (length(libsize_vec) == nrow(coldata)) {
+                guard_df$p_libsize[i] <- tryCatch({
+                  suppressWarnings(stats::cor.test(as.numeric(sv), libsize_vec)$p.value)
+                }, error=function(e) NA_real_)
+                guard_df$cor_libsize[i] <- tryCatch({
+                  suppressWarnings(stats::cor(as.numeric(sv), libsize_vec, use="complete.obs"))
+                }, error=function(e) NA_real_)
+              }
+              if (length(zero_frac_vec) == nrow(coldata)) {
+                guard_df$p_zero_frac[i] <- tryCatch({
+                  suppressWarnings(stats::cor.test(as.numeric(sv), zero_frac_vec)$p.value)
+                }, error=function(e) NA_real_)
+                guard_df$cor_zero_frac[i] <- tryCatch({
+                  suppressWarnings(stats::cor(as.numeric(sv), zero_frac_vec, use="complete.obs"))
+                }, error=function(e) NA_real_)
+              }
+            }
+            guard_path <- file.path(outdir, paste0(gse_id, '__', group_col, '__dream_sv_guard.tsv'))
+            try(readr::write_tsv(guard_df, guard_path), silent=TRUE)
+            cov_p_cols <- grep("^p_", colnames(guard_df), value=TRUE)
+            min_p_cov <- if (length(cov_p_cols) > 0) suppressWarnings(min(as.matrix(guard_df[, cov_p_cols, drop=FALSE]), na.rm=TRUE)) else NA_real_
+            lib_guard <- suppressWarnings(min(guard_df$p_libsize, na.rm=TRUE)) < sva_corr_p_thresh
+            zero_guard <- suppressWarnings(min(guard_df$p_zero_frac, na.rm=TRUE)) < sva_corr_p_thresh
+            cor_guard <- suppressWarnings(max(abs(guard_df$cor_libsize), na.rm=TRUE)) >= libsize_guard_cor_thresh
+            zero_cor_guard <- suppressWarnings(max(abs(guard_df$cor_zero_frac), na.rm=TRUE)) >= libsize_guard_cor_thresh
+            cov_guard <- is.finite(min_p_cov) && min_p_cov < sva_corr_p_thresh
+            if (isTRUE(cov_guard || lib_guard || cor_guard || zero_guard || zero_cor_guard)) {
+              message('[warn] SV guard: dropping SV covariates due to association with group/covariates/libsize/zero-fraction')
+              sv_cols <- character(0)
+              fixed_terms <- setdiff(fixed_terms, guard_df$SV)
+            }
+          }
         }
 
         # Fixed effects
@@ -1936,6 +2037,11 @@ def main(argv: List[str] | None = None) -> int:
     ap.add_argument('--region_col', help='Brain region or similar biological factor to include as fixed effect (0 + region)')
     ap.add_argument('--fixed_effects', help='Comma-separated additional fixed-effect covariates (sex,age,PMI,pH,ethnicity,SVs, etc.)')
     ap.add_argument('--sv_cols', help='Comma-separated surrogate variable columns to append to fixed effects')
+    ap.add_argument('--sva_corr_p_thresh', type=float, default=0.05, help='Guard: if SV associates with group/covariates at p < thresh, drop SVs')
+    ap.add_argument('--sva_guard_cor_thresh', type=float, default=0.8, help='Guard: |cor(SV, libsize/zero-fraction)| >= thresh triggers SV drop')
+    ap.add_argument('--sva_auto_skip_n', type=int, default=6, help='Guard: if sample count <= n, drop SV covariates entirely (0 disables)')
+    ap.add_argument('--auto_sv_from_deseq2', dest='auto_sv_from_deseq2', action='store_true', default=True, help='If no --sv_cols provided, try to import auto SVA TSV from DESeq2 output (default: on)')
+    ap.add_argument('--no_auto_sv_from_deseq2', dest='auto_sv_from_deseq2', action='store_false', help='Disable auto import of DESeq2 SV TSV')
     ap.add_argument('--random_effects', help='Comma-separated columns for random intercepts (e.g. donor_id)')
     ap.add_argument('--region_specific', action='store_true', help='Emit region-specific contrasts (region×group)')
     ap.add_argument('--region_specific_groups', help='Comma-separated region levels to report individually (default: all)')
