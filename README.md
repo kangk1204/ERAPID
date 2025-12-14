@@ -186,7 +186,7 @@ python erapid.py \
 
 ## SVA Sensitivity (Supplementary)
 
-- Shared simulations (one-time, optional): `Rscript supplementary/sva_sensitivity/sva_sensitivity.R` regenerates the FDR/TPR, Jaccard, borderline-case figures, and summary TSVs. Useful for methods sections; not required for routine runs.
+- Shared simulations (one-time, optional): `Rscript supplementary/sva_sensitivity/sva_sensitivity.R` regenerates the FDR/TPR, Jaccard, borderline-case figures, and summary TSVs. Handy if you want fresh copies of the reference plots; not required for routine runs.
 - Per-run QC outputs (each in `GSE.../02_DEG/`):
   - `*__auto_summary.html`: interactive guard map plus a plain-English note on why AUTO kept or dropped SVs.
   - `*__sensitivity.html`: sample-size–matched FDR/TPR/Jaccard and design vs. SVA overlap.
