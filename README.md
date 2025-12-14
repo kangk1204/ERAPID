@@ -84,7 +84,7 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - `--batch_cols age,sex` for an explicit formula.
    - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
    - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
-   - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference---group_ref) for detailed behavior and examples.
+   - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference) for detailed behavior and examples.
  - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
  - Batch/SVA safety defaults (designed to avoid over-correction):
    - `--sva_auto_skip_n 6` (default): n ≤ 6 → skip SVA entirely and use design-only.
@@ -97,6 +97,7 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - `run_metadata.json` captures runtime provenance for reproducibility.
    - Open `GSE125583/index.html` (or the corresponding `index.html` for your study) to explore volcano/MA plots, QC summaries, and evidence tables.
 
+<a id="group-reference"></a>
 ### Group Reference — `--group_ref`
 
 `--group_ref` accepts a comma-separated priority list that determines which level(s) are treated as the reference (control) when ERAPID assembles contrasts. Every log₂ fold change, RNK score, FGSEA enrichment plot, and meta-summary is interpreted as **test vs. reference**, so setting this flag correctly is critical for downstream conclusions.
@@ -180,7 +181,7 @@ python erapid.py \
 - `--seed`: set an R random seed for reproducibility.
 - `--no_interactive_plots`: skip HTML volcano/MA plots when running headless.
 - `--force_evidence` / `--evidence_top_n`: control the evidence-gathering stage for prioritized genes.
-- `--group_ref`: sets contrast orientation; see [Group Reference](#group-reference---group_ref) for details.
+- `--group_ref`: sets contrast orientation; see [Group Reference](#group-reference) for details.
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
 - `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
 
