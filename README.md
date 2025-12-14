@@ -186,12 +186,12 @@ python erapid.py \
 
 ## SVA Sensitivity (Supplementary)
 
-- Reproducibility/safety checks for AUTO SVA live in `supplementary/sva_sensitivity/sva_sensitivity.R` (FDR/TPR, Jaccard, borderline examples, summary TSVs). Re-run with `Rscript supplementary/sva_sensitivity.R` if you need to refresh the shared figures.
-- Per-run outputs you should cite in the paper:
-  - AUTO summary (`02_DEG/*__auto_summary.html`): interactive guard map (SV vs. group/covariate/libsize/zeros) + decision rationale.
-  - Sensitivity snapshot (`02_DEG/*__sensitivity.html`): sample-size–matched FDR/TPR/Jaccard and design vs. SVA overlap.
-  - Guard PNG (`02_DEG/*__auto_guard.png`) if you need a static figure.
-- Practical defaults (match the shipped pipeline): `--sva_auto_skip_n 6`, `--sva_corr_p_thresh 0.05`, `--sva_cap_auto` (sqrt rule, cap 5 for n≥30). For very small n (<20), keeping p<0.05 with a cap of ~2 SVs avoids over-correction; if AUTO drops all SVs, stay with design-only.
+- Shared simulations (one-time, optional): `Rscript supplementary/sva_sensitivity/sva_sensitivity.R` regenerates the FDR/TPR, Jaccard, borderline-case figures, and summary TSVs. Useful for methods, not needed for routine runs.
+- Per-run items to show reviewers (all inside each `GSE.../02_DEG/`):
+  - `*__auto_summary.html`: interactive guard map + plain-English reason why AUTO kept/dropped SVs.
+  - `*__sensitivity.html`: small-n matched FDR/TPR/Jaccard plus design vs. SVA overlap.
+  - `*__auto_guard.png`: static guard plot if you prefer an image.
+- Safe defaults (already baked in): `--sva_auto_skip_n 6`, `--sva_corr_p_thresh 0.05`, `--sva_cap_auto` (sqrt rule, cap 5 for n≥30). For n<20, keep p<0.05 and cap SVs around 2; if AUTO rejects SVs, stick with design-only.
 
 For a complete list of arguments, run:
 
