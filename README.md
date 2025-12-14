@@ -175,14 +175,6 @@ python erapid.py \
 - `--evidence_top_n` controls how many genes feed into the search (default 30).
 - Add `--force_evidence` to generate per-method evidence tables (separate DESeq2 and dream reports) alongside the combined summary.
 
-## What ERAPID Adds (vs GREIN/GEOexplorer)
-
-- **Automated metadata harmonization**: emits curated `*_coldata_for_edit.tsv`, group suggestions, and an interactive coldata browser.
-- **Evidence-ranked candidates**: dual-engine DE (DESeq2 + dream), FGSEA, and an evidence layer that scores genes by padj/log2FC overlap plus literature keywords.
-- **Built-in meta**: one-line aggregation across GSE runs (shared contrasts, UpSet plots, combined evidence tables).
-- **Batch safety defaults**: AUTO SVA guards against over-correction (group/covariate/libsize/zero-fraction), caps SVs by sample size, and writes a guard map + reproducibility metrics to the dashboard.
-- **Shipping example**: `GSE125583_coldata_for_edit.tsv` is prefilled so you can run the Quickstart end-to-end without manual edits.
-
 ## Helpful Flags
 
 - `--seed`: set an R random seed for reproducibility.
@@ -194,16 +186,12 @@ python erapid.py \
 
 ## SVA Sensitivity (Supplementary)
 
-- Reproducibility/safety check for the AUTO SVA rule lives in `supplementary/sva_sensitivity/sva_sensitivity.R`. Running `Rscript supplementary/sva_sensitivity.R` regenerates:
-  - `fig_sva_fdr_tpr.png` (FDR/TPR vs. decision thresholds and SV caps),
-  - `fig_sva_jaccard.png` (Jaccard overlap of top100 genes as a reproducibility proxy),
-  - `fig_sva_borderline.png` (PCA + volcano in a borderline p(SV~group) case),
-  - `sva_sensitivity_summary.tsv` (table S1) and `sva_sensitivity_metrics.tsv` (per-replicate metrics).
-- Each run now writes an AUTO guard map and a reproducibility snapshot (Jaccard, DEG overlap) to `02_DEG/*__sensitivity.html` plus the guard PNG; these mirror the simulation defaults for beginner-friendly QA.
-- Empirical guide (synthetic counts with hidden batch):
-  - Small n (≈12): keeping AUTO p<0.05 with a hard cap of 2 SVs lowered FDR (~0.03) while retaining TPR (~0.27); loosening to p<0.10 nudged FDR upward. Prefer design-only if AUTO refuses SVs or if SV~group is strong.
-  - Mid n (≈40): AUTO SVA includes ~0.2–0.3 SVs on average with p<0.05; FDR/TPR stay near baseline (~0.055/0.99) and Jaccard reproducibility ~0.44 whether capped at 2 or auto.
-  - Practical defaults to mirror the study: use `--sva_auto_skip_n 6`, `--sva_corr_p_thresh 0.05`, and `--sva_cap_auto` (sqrt rule, cap 5) for n≥30; for n<20, cap SVs at 2 and keep p<0.05.
+- Reproducibility/safety checks for AUTO SVA live in `supplementary/sva_sensitivity/sva_sensitivity.R` (FDR/TPR, Jaccard, borderline examples, summary TSVs). Re-run with `Rscript supplementary/sva_sensitivity.R` if you need to refresh the shared figures.
+- Per-run outputs you should cite in the paper:
+  - AUTO summary (`02_DEG/*__auto_summary.html`): interactive guard map (SV vs. group/covariate/libsize/zeros) + decision rationale.
+  - Sensitivity snapshot (`02_DEG/*__sensitivity.html`): sample-size–matched FDR/TPR/Jaccard and design vs. SVA overlap.
+  - Guard PNG (`02_DEG/*__auto_guard.png`) if you need a static figure.
+- Practical defaults (match the shipped pipeline): `--sva_auto_skip_n 6`, `--sva_corr_p_thresh 0.05`, `--sva_cap_auto` (sqrt rule, cap 5 for n≥30). For very small n (<20), keeping p<0.05 with a cap of ~2 SVs avoids over-correction; if AUTO drops all SVs, stay with design-only.
 
 For a complete list of arguments, run:
 
