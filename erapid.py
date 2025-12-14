@@ -4701,7 +4701,6 @@ function filterTable(inp){{
         pca_after_design = os.path.join(deg_dir, f"{gse}__{args.group_col}__pca_after_design.html")
         sensitivity = os.path.join(deg_dir, f"{gse}__{args.group_col}__sensitivity.html")
         auto_guard_png = os.path.join(deg_dir, f"{gse}__{args.group_col}__auto_guard.png")
-        auto_summary_html = os.path.join(deg_dir, f"{gse}__{args.group_col}__auto_summary.html")
         if os.path.exists(sva_heat):
             deg_sections["Batch Diagnostics"].append((
                 "SV–covariate heatmap",
@@ -4730,12 +4729,6 @@ function filterTable(inp){{
             deg_sections["Batch Diagnostics"].append((
                 "Sensitivity (design vs SVA)",
                 os.path.relpath(sensitivity, gse_dir),
-                "interactive",
-            ))
-        if os.path.exists(auto_summary_html):
-            deg_sections["Batch Diagnostics"].append((
-                "AUTO guard map (interactive)",
-                os.path.relpath(auto_summary_html, gse_dir),
                 "interactive",
             ))
         if os.path.exists(auto_guard_png):

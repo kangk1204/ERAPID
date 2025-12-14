@@ -79,6 +79,19 @@ def save_interactive_table_html(
     html_cols = html_cols or []
 
     numeric_cols = {i for i, dt in enumerate(df.dtypes) if np.issubdtype(dt, np.number)}
+    # Prefer ordering by padj or pvalue columns (ascending) when present.
+    order_idx = None
+    for i, col in enumerate(df.columns):
+        norm = str(col).lower().replace('.', '_')
+        if "padj" in norm or norm in {"adj_p", "adj_pval", "adj_p_value"}:
+            order_idx = i
+            break
+    if order_idx is None:
+        for i, col in enumerate(df.columns):
+            norm = str(col).lower().replace('.', '_')
+            if norm in {"pvalue", "p_value", "pval"}:
+                order_idx = i
+                break
 
     thead = "<tr>" + "".join(f"<th>{ihtml.escape(str(col))}</th>" for col in df.columns) + "</tr>"
     tfoot = thead
@@ -178,6 +191,7 @@ def save_interactive_table_html(
         deferRender: true,
         pageLength: __PAGELEN__,
         lengthMenu: __LENMENU__,
+        __ORDER_BLOCK__
         dom: 'Blfrtip',
         buttons: [
           { extend: 'copyHtml5', text: 'Copy' },
@@ -223,6 +237,7 @@ def save_interactive_table_html(
                 .replace("__TBODY__", tbody)
                 .replace("__PAGELEN__", str(max(1, int(page_len))))
                 .replace("__LENMENU__", _length_menu_js(length_menu))
+                .replace("__ORDER_BLOCK__", f"order: [[{order_idx}, 'asc']]," if order_idx is not None else "")
                 .replace("__ASSET_PREFIX__", asset_prefix))
     file_path.write_text(html_doc, encoding="utf-8")
     return str(file_path.resolve())
