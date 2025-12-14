@@ -55,6 +55,7 @@ import shutil
 import sys
 import glob
 import re
+from pathlib import Path
 from textwrap import dedent
 import uuid
 
@@ -135,6 +136,8 @@ def build_r_script(args) -> str:
     s_deg_padj    = str(getattr(args, 'deg_padj_thresh', 0.05))
     s_deg_lfc     = str(getattr(args, 'deg_lfc_thresh', 0.585))
     s_deg_sens_topn = str(getattr(args, 'deg_sens_topn', 100))
+    supp_sva_summary = Path(__file__).resolve().parent.parent / "supplementary" / "sva_sensitivity" / "sva_sensitivity_summary.tsv"
+    s_sva_sens_path = _r_str(supp_sva_summary.as_posix())
 
     theme_css_raw = (
         "<style>:root{--bg:#ffffff;--text:#0f172a;--muted:#64748b;--surface:#f8fafc;--border:#e5e7eb;--accent:#2563eb;--accent-weak:#dbeafe;--card:#ffffff;--code-bg:#f3f4f6;--ring:rgba(37,99,235,.25);--shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04)} "
@@ -200,6 +203,7 @@ def build_r_script(args) -> str:
     parts.append("    coldata_path<- " + s_coldata + "\n")
     parts.append("    annot_path  <- " + s_annot + "\n")
     parts.append("    outdir      <- " + s_outdir + "\n")
+    parts.append("    sva_sens_path <- " + s_sva_sens_path + "\n")
     parts.append("    gse_id      <- " + s_gse + "\n")
     parts.append("    group_col   <- " + s_group_col + "\n")
     parts.append("    batch_cols  <- " + s_batch_cols + "\n")
@@ -1671,6 +1675,21 @@ def build_r_script(args) -> str:
       goto_summary <- FALSE
       try({
         nsamp_auto <- ncol(counts_mat)
+        sva_sens_row <- NULL
+        if (file.exists(sva_sens_path)) {
+          sens_df <- try(readr::read_tsv(sva_sens_path, show_col_types=FALSE), silent=TRUE)
+          if (!inherits(sens_df, "try-error") && is.data.frame(sens_df) && nrow(sens_df) > 0) {
+            sens_df$diff <- abs(sens_df$sample_size - nsamp_auto)
+            target_cap <- if (isTRUE(sva_cap_auto)) "auto" else "cap2"
+            target_p <- if (!is.na(sva_corr_p_thresh) && sva_corr_p_thresh <= 0.05) "p<0.05" else "p<0.10"
+            cand <- sens_df[sens_df$cap_mode == target_cap & sens_df$p_thresh_label == target_p, , drop=FALSE]
+            if (nrow(cand) == 0) cand <- sens_df
+            cand <- cand[order(cand$diff), , drop=FALSE]
+            if (nrow(cand) > 0) {
+              sva_sens_row <- cand[1, , drop=FALSE]
+            }
+          }
+        }
         if (is.finite(sva_auto_skip_n) && sva_auto_skip_n > 0 && nsamp_auto <= sva_auto_skip_n) {
           message("[warn] AUTO guard: sample count (", nsamp_auto, ") <= sva_auto_skip_n=", sva_auto_skip_n, "; forcing design-only (skip SVA).")
           assoc <- data.frame()
@@ -1801,12 +1820,59 @@ def build_r_script(args) -> str:
             } else {
               message("[info] AUTO diag: max |cor(SV, zero_fraction)| = NA (zero-fraction guard disabled)")
             }
+            # Per-SV guards for plotting/interpretability
+            assoc$min_p_covariate <- NA_real_
+            if (length(cov_p_cols) > 0) {
+              assoc$min_p_covariate <- apply(assoc[, cov_p_cols, drop=FALSE], 1, function(v) {
+                suppressWarnings(min(as.numeric(v), na.rm=TRUE))
+              })
+            }
+            assoc$include_auto <- TRUE
+            if (nrow(assoc) > 0) {
+              guard_vec <- rep(FALSE, nrow(assoc))
+              guard_vec <- guard_vec | (is.finite(assoc$p_group) & assoc$p_group < sva_corr_p_thresh)
+              if (!is.null(assoc$min_p_covariate)) {
+                guard_vec <- guard_vec | (is.finite(assoc$min_p_covariate) & assoc$min_p_covariate < sva_corr_p_thresh)
+              }
+              guard_vec <- guard_vec | (is.finite(assoc$p_libsize) & assoc$p_libsize < sva_corr_p_thresh)
+              guard_vec <- guard_vec | (is.finite(assoc$cor_libsize) & abs(assoc$cor_libsize) >= libsize_guard_cor_thresh)
+              guard_vec <- guard_vec | (is.finite(assoc$p_zero_frac) & assoc$p_zero_frac < sva_corr_p_thresh)
+              guard_vec <- guard_vec | (is.finite(assoc$cor_zero_frac) & abs(assoc$cor_zero_frac) >= libsize_guard_cor_thresh)
+              assoc$include_auto <- !guard_vec
+              guard_json <- NULL
+              try({
+                guard_plot_path <- file.path(outdir, paste0(gse_id, "__", group_col, "__auto_guard.png"))
+                if (requireNamespace("ggplot2", quietly=TRUE)) {
+                  suppressPackageStartupMessages(library(ggplot2))
+                  pd <- assoc
+                  pd$neglog_group <- -log10(pd$p_group)
+                  pd$neglog_cov <- -log10(pd$min_p_covariate)
+                  pd$neglog_cov[!is.finite(pd$neglog_cov)] <- NA_real_
+                  guard_plot <- ggplot(pd, aes(x=neglog_group, y=neglog_cov, color=include_auto, label=SV)) +
+                    geom_point(size=3, alpha=0.9) +
+                    geom_vline(xintercept = -log10(sva_corr_p_thresh), linetype="dashed", color="#ef4444") +
+                    geom_hline(yintercept = -log10(sva_corr_p_thresh), linetype="dashed", color="#ef4444") +
+                    scale_color_manual(values=c("FALSE"="#ef4444","TRUE"="#0ea5e9"), labels=c("dropped","kept"), name="AUTO decision") +
+                    labs(x="-log10 p(SV~group)", y="-log10 min p(SV~covariates/QC)", title=paste0(gse_id," — AUTO guard map")) +
+                    theme_minimal(base_size=12)
+                  suppressMessages(ggsave(guard_plot_path, guard_plot, width=7.2, height=5.2, dpi=160))
+                }
+                if (requireNamespace("jsonlite", quietly=TRUE)) {
+                  guard_json <- jsonlite::toJSON(
+                    pd[, c("SV","p_group","min_p_covariate","p_libsize","cor_libsize","p_zero_frac","cor_zero_frac","include_auto")],
+                    dataframe = "rows",
+                    na = "null",
+                    digits = 6
+                  )
+                }
+              }, silent=TRUE)
+            }
             cov_guard <- is.finite(min_p_covariate) && min_p_covariate < sva_corr_p_thresh
             lib_guard <- is.finite(min_p_libsize) && min_p_libsize < sva_corr_p_thresh
             cor_guard <- is.finite(max_abs_cor_libsize) && max_abs_cor_libsize >= libsize_guard_cor_thresh
             zero_guard <- is.finite(min_p_zero_frac) && min_p_zero_frac < sva_corr_p_thresh
             zero_cor_guard <- is.finite(max_abs_cor_zero_frac) && max_abs_cor_zero_frac >= libsize_guard_cor_thresh
-            tech_guard <- isTRUE(cov_guard || lib_guard || cor_guard || zero_guard || zero_cor_guard)
+            tech_guard <- isTRUE(cov_guard || lib_guard || cor_guard || zero_guard || zero_cor_guard || any(!assoc$include_auto, na.rm=TRUE))
             if (tech_guard) {
               message("[warn] AUTO guard: SVs track a covariate, library size, or zero fraction (p < ", sva_corr_p_thresh, " or |cor| >= ", libsize_guard_cor_thresh, "); forcing design-only (no SVs).")
             }
@@ -1883,6 +1949,42 @@ def build_r_script(args) -> str:
           }
           cov_used <- if (nzchar(cov_terms)) cov_terms else "(none)"
           sv_info <- if (choice == "sva") paste0(nsv, " SVs included") else "0 SVs (design-only)"
+          # Build a short, novice-friendly reason string explaining why SVs were dropped.
+          reason_items <- c()
+          if (choice == "design" && exists("assoc") && is.data.frame(assoc) && nrow(assoc) > 0) {
+            # Identify the strongest guard violations across SVs
+            cov_cols <- setdiff(grep("^p_", colnames(assoc), value = TRUE), c("p_group", "p_libsize", "p_zero_frac"))
+            for (i in seq_len(nrow(assoc))) {
+              svname <- assoc$SV[i]
+              pg <- assoc$p_group[i]
+              if (!is.na(pg) && pg < sva_corr_p_thresh) {
+                reason_items <- c(reason_items, sprintf("%s: group-association p=%.2g < %.2g", svname, pg, sva_corr_p_thresh))
+              }
+              if (length(cov_cols) > 0) {
+                pcov <- assoc[i, cov_cols, drop = FALSE]
+                pcov_min <- suppressWarnings(min(as.numeric(pcov), na.rm = TRUE))
+                if (is.finite(pcov_min) && pcov_min < sva_corr_p_thresh) {
+                  reason_items <- c(reason_items, sprintf("%s: covariate-association p=%.2g < %.2g", svname, pcov_min, sva_corr_p_thresh))
+                }
+              }
+              plib <- assoc$p_libsize[i]; clib <- assoc$cor_libsize[i]
+              if ((!is.na(plib) && plib < sva_corr_p_thresh) || (!is.na(clib) && abs(clib) >= libsize_guard_cor_thresh)) {
+                reason_items <- c(reason_items, sprintf("%s: library-size guard (p=%.2g, |cor|=%.3f)", svname, plib, clib))
+              }
+              pz <- assoc$p_zero_frac[i]; cz <- assoc$cor_zero_frac[i]
+              if ((!is.na(pz) && pz < sva_corr_p_thresh) || (!is.na(cz) && abs(cz) >= libsize_guard_cor_thresh)) {
+                reason_items <- c(reason_items, sprintf("%s: zero-fraction guard (p=%.2g, |cor|=%.3f)", svname, pz, cz))
+              }
+            }
+            if (length(reason_items) > 3) {
+              reason_items <- reason_items[1:3]
+            }
+          }
+          reason_html <- if (length(reason_items) > 0) {
+            paste0("<li><b>Why SVs were excluded:</b> ", esc(paste(reason_items, collapse="; ")), "</li>")
+          } else {
+            ""
+          }
           assoc_table <- ""
           if (exists("assoc") && is.data.frame(assoc) && nrow(assoc) > 0) {
             show <- utils::head(assoc, n=min(10, nrow(assoc)))
@@ -1892,6 +1994,49 @@ def build_r_script(args) -> str:
 "), "</tbody></table>")
           } else {
             assoc_table <- "<p>No SV associations computed (nSV=0).</p>"
+          }
+          guard_plot_html <- ""
+          guard_png <- paste0(gse_id,'__',group_col,'__auto_guard.png')
+          if (exists("guard_json") && !is.null(guard_json)) {
+              fallback_js <- ""
+              if (file.exists(file.path(outdir, guard_png))) {
+                # Escape % for sprintf; use double quotes for HTML attribute values.
+                fallback_js <- sprintf("document.getElementById('guard-plot').outerHTML=\\\"<img src='%s' style='max-width:760px;width:100%%;border:1px solid #e5e7eb;border-radius:12px' loading='lazy'/>\\\";", guard_png)
+              }
+              guard_plot_html <- paste0(
+                "<h3>Guard map (interactive)</h3>",
+                "<p style='color:#555;font-size:13px;margin:6px 0 4px 0'>Hover to see SV diagnostics. Blue=kept; red=dropped. Dotted lines mark p<threshold (", esc(sva_corr_p_thresh), ").</p>",
+                "<div id='guard-plot' style='width:100%;max-width:860px;height:420px;border:1px solid #e5e7eb;border-radius:12px;'></div>",
+                "<script src='https://cdn.plot.ly/plotly-2.27.0.min.js'></script>",
+                "<script>(function(){try{const data=", guard_json, ";",
+              "const pthresh=", esc(sva_corr_p_thresh), ";",
+              "const corThresh=", esc(libsize_guard_cor_thresh), ";",
+              "const x=data.map(d=>d.p_group>0?-Math.log10(d.p_group):null);",
+              "const y=data.map(d=>d.min_p_covariate>0?-Math.log10(d.min_p_covariate):null);",
+              "const hover=data.map(d=>`SV${d.SV} | p_group=${d.p_group===null?'NA':d.p_group.toExponential(2)} | min_p_cov=${d.min_p_covariate===null?'NA':d.min_p_covariate.toExponential(2)} | p_lib=${d.p_libsize===null?'NA':d.p_libsize.toExponential(2)} | |cor_lib|=${d.cor_libsize===null?'NA':Math.abs(d.cor_libsize).toFixed(3)} | p_zero=${d.p_zero_frac===null?'NA':d.p_zero_frac.toExponential(2)} | |cor_zero|=${d.cor_zero_frac===null?'NA':Math.abs(d.cor_zero_frac).toFixed(3)} | kept=${d.include_auto?'yes':'no'}`);",
+              "const trace={x:x,y:y,mode:'markers',type:'scattergl',hoverinfo:'text',text:hover,marker:{color:data.map(d=>d.include_auto?'#0ea5e9':'#ef4444'),size:9,opacity:0.9}};",
+              "const xmax=Math.max(...x.filter(v=>v!==null),-Math.log10(pthresh)+1,5);",
+              "const ymax=Math.max(...y.filter(v=>v!==null),-Math.log10(pthresh)+1,5);",
+                "const layout={margin:{l:70,r:20,t:10,b:60},xaxis:{title:'-log10 p(SV~group)',range:[-0.2,xmax]},yaxis:{title:'-log10 min p(SV~covariates/QC)',range:[-0.2,ymax]},hovermode:'closest',shapes:[{type:'line',x0:-Math.log10(pthresh),x1:-Math.log10(pthresh),y0:0,y1:ymax,line:{color:'#ef4444',dash:'dot'}},{type:'line',x0:0,x1:xmax,y0:-Math.log10(pthresh),y1:-Math.log10(pthresh),line:{color:'#ef4444',dash:'dot'}}]};",
+                "Plotly.newPlot('guard-plot',[trace],layout,{displaylogo:false,responsive:true});",
+                "}catch(e){console.error('guard plot failed',e);", fallback_js, "}})();</script>"
+              )
+            } else if (file.exists(file.path(outdir, guard_png))) {
+            guard_plot_html <- paste0("<h3>Guard map</h3><p style='color:#555;font-size:13px;margin:6px 0 4px 0'>Points in blue are kept; red points were dropped for aligning with group/covariates/QC. Dotted lines show p<threshold (", esc(sva_corr_p_thresh), ").</p><img src='", guard_png, "' style='max-width:760px;width:100%;border:1px solid #e5e7eb;border-radius:12px' loading='lazy'/>")
+          }
+          sim_block <- ""
+          if (exists("sva_sens_row") && !is.null(sva_sens_row) && is.data.frame(sva_sens_row) && nrow(sva_sens_row) > 0) {
+            sr <- sva_sens_row[1, ]
+            sim_block <- paste0(
+              "<h3>Sample-size matched simulation</h3>",
+              "<p style='color:#555;font-size:13px;margin:6px 0 8px 0'>Nearest simulated n=", esc(sr$sample_size),
+              " (", esc(sr$p_thresh_label), ", cap=", esc(sr$cap_mode), "). Lower FDR with stable TPR and Jaccard indicates safer correction.</p>",
+              "<ul>",
+              "<li><b>Mean FDR:</b> ", esc(signif(sr$mean_fdr,3)), "</li>",
+              "<li><b>Mean TPR:</b> ", esc(signif(sr$mean_tpr,3)), "</li>",
+              "<li><b>Top-100 Jaccard:</b> ", esc(signif(sr$mean_jaccard,3)), "</li>",
+              "</ul>"
+            )
           }
           html <- paste0(
             "<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'>",
@@ -1908,9 +2053,22 @@ def build_r_script(args) -> str:
             "<li><b>Libsize/zeros guard:</b> min p(SV~libsize)=", esc(signif(min_p_libsize,3)), "; max |cor|=", esc(signif(max_abs_cor_libsize,3)), "; min p(SV~zero_frac)=", esc(signif(min_p_zero_frac,3)), "; max |cor|=", esc(signif(max_abs_cor_zero_frac,3)), " (p<thresh or |cor|≥", esc(libsize_guard_cor_thresh), " → design-only)</li>",
             "<li><b>Assoc TSV:</b> ", if (exists("out_assoc") && file.exists(out_assoc)) paste0("<a href='", basename(out_assoc), "'>", basename(out_assoc), "</a>") else "(not written)", "</li>",
             if (exists("out_sv")) paste0("<li><b>SVs TSV:</b> <a href='", basename(out_sv), "'>", basename(out_sv), "</a></li>") else "",
+            reason_html,
             "</ul>",
             "<h3>Top SV Associations</h3>", assoc_table,
             "<p style='color:#666;margin-top:10px'>AUTO rule: include SVs only if they are not associated with the group (p ≥ ", esc(sva_corr_p_thresh), "), not strongly tied to design/QC covariates (p ≥ ", esc(sva_corr_p_thresh), "), and not strongly tied to library size or zero-fraction (p ≥ ", esc(sva_corr_p_thresh), " and |cor| < ", esc(libsize_guard_cor_thresh), "). Otherwise keep design-only.</p>",
+            "<details style='margin-top:8px'><summary style='cursor:pointer;font-weight:600'>How to read (beginner)</summary>",
+            "<ul>",
+            "<li>p_group < ", esc(sva_corr_p_thresh), ": SV is aligned with the outcome → drop</li>",
+            "<li>Any p_covariate (columns like p_age..., p_brain_ph...) < ", esc(sva_corr_p_thresh), ": overlaps known covariates → drop</li>",
+            "<li>p_libsize < ", esc(sva_corr_p_thresh), " or |cor_libsize| ≥ ", esc(libsize_guard_cor_thresh), ": tracks library size → drop</li>",
+            "<li>p_zero_frac < ", esc(sva_corr_p_thresh), " or |cor_zero_frac| ≥ ", esc(libsize_guard_cor_thresh), ": tracks zero-fraction → drop</li>",
+            "<li>If any rule trips for an SV, we exclude it. If all SVs trip, we keep design-only.</li>",
+            "</ul>",
+            "<p style='color:#666'>Match the numbers in the table to these four rules to see why SVs were excluded.</p>",
+            "</details>",
+            guard_plot_html,
+            sim_block,
             "</body></html>"
           )
           writeLines(html, out_summary)
@@ -1938,6 +2096,17 @@ def build_r_script(args) -> str:
           "<li><b>Reason:</b> sample count guard triggered; no SVs estimated.</li>",
           "</ul>",
           "<p style='color:#666;margin-top:10px'>AUTO rule: include SVs only when sample size and association guards allow; otherwise keep design-only.</p>",
+          if (exists("sva_sens_row") && !is.null(sva_sens_row) && is.data.frame(sva_sens_row) && nrow(sva_sens_row) > 0) {
+            sr <- sva_sens_row[1, ]
+            paste0("<h3>Sample-size matched simulation</h3>",
+                   "<p style='color:#555;font-size:13px;margin:6px 0 8px 0'>Nearest synthetic n=", esc(sr$sample_size),
+                   " (", esc(sr$p_thresh_label), ", cap=", esc(sr$cap_mode), ").</p>",
+                   "<ul>",
+                   "<li><b>Mean FDR:</b> ", esc(signif(sr$mean_fdr,3)), "</li>",
+                   "<li><b>Mean TPR:</b> ", esc(signif(sr$mean_tpr,3)), "</li>",
+                   "<li><b>Top-100 Jaccard:</b> ", esc(signif(sr$mean_jaccard,3)), "</li>",
+                   "</ul>")
+          } else { "" },
           "</body></html>"
         )
         try(writeLines(choice, out_choice), silent=TRUE)
@@ -2490,6 +2659,7 @@ if ('Symbol' %in% colnames(df)) {
                  paste0('<h1>', gse_id, ' — Sensitivity (', group_col, ')</h1>'),
                  '<p style="max-width:760px;color:#374151;margin:12px 0 20px 0;">Chosen up/down counts reflect the final model (auto-selected design or SVA). Design-only omits surrogate variables; SVA-5 adds up to five SV covariates. Overlap columns report how many genes remain significant in each comparison, and the Top100 columns compare the gene sets used for evidence generation.</p>',
                  paste0('<table><thead><tr><th>Contrast</th><th>Chosen up/down</th><th>Design-only up/down</th><th>SVA-5 up/down</th><th>Overlap chosen∩design</th><th>Overlap chosen∩SVA5</th><th>', top_label, ' chosen</th><th>', top_label, ' design-only</th><th>', top_label, ' SVA-5</th><th>', top_label, ' overlap chosen∩design</th><th>', top_label, ' overlap chosen∩SVA5</th></tr></thead><tbody>'))
+      jac_rows <- list()
       for (key in names(deg_sets_current)) {
         ch <- deg_sets_current[[key]]
         du <- sets_design_sig[[key]]
@@ -2509,6 +2679,11 @@ if ('Symbol' %in% colnames(df)) {
         top_su_str <- if (is.null(su_top)) '(n/a)' else as.character(length(su_top))
         top_overlap_cd <- length(intersect(ch_top, du_top))
         top_overlap_su_str <- if (is.null(su_top)) '(n/a)' else as.character(length(intersect(ch_top, su_top)))
+        j_cd <- NA_real_
+        j_cs <- NA_real_
+        if (length(union(ch_top, du_top)) > 0) j_cd <- length(intersect(ch_top, du_top)) / length(union(ch_top, du_top))
+        if (!is.null(su_top) && length(union(ch_top, su_top)) > 0) j_cs <- length(intersect(ch_top, su_top)) / length(union(ch_top, su_top))
+        jac_rows[[length(jac_rows)+1]] <- data.frame(Contrast=key, Jaccard_chosen_vs_design=j_cd, Jaccard_chosen_vs_SVA5=j_cs)
         lines <- c(lines, sprintf('<tr><td>%s</td><td>%d/%d</td><td>%d/%d</td><td>%s</td><td>%d/%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%d</td><td>%s</td></tr>',
                                   key, length(ch$up), length(ch$down), length(du$up), length(du$down),
                                   su_str,
@@ -2516,7 +2691,32 @@ if ('Symbol' %in% colnames(df)) {
                                   top_ch_len, top_du_len, top_su_str,
                                   top_overlap_cd, top_overlap_su_str))
       }
-      lines <- c(lines, '</tbody></table></body></html>')
+      lines <- c(lines, '</tbody></table>')
+      if (length(jac_rows) > 0) {
+        jac_tab <- do.call(rbind, jac_rows)
+        lines <- c(lines, '<h3 style="margin-top:18px">Top set reproducibility (Jaccard)</h3>',
+                   '<table><thead><tr><th>Contrast</th><th>Jaccard: chosen vs design-only</th><th>Jaccard: chosen vs SVA-5</th></tr></thead><tbody>')
+        for (i in seq_len(nrow(jac_tab))) {
+          lines <- c(lines, sprintf('<tr><td>%s</td><td>%s</td><td>%s</td></tr>',
+                                    jac_tab$Contrast[i],
+                                    ifelse(is.na(jac_tab$Jaccard_chosen_vs_design[i]), "(n/a)", sprintf("%.3f", jac_tab$Jaccard_chosen_vs_design[i])),
+                                    ifelse(is.na(jac_tab$Jaccard_chosen_vs_SVA5[i]), "(n/a)", sprintf("%.3f", jac_tab$Jaccard_chosen_vs_SVA5[i]))))
+        }
+        lines <- c(lines, '</tbody></table>')
+      }
+      guard_png <- paste0(gse_id,'__',group_col,'__auto_guard.png')
+      if (file.exists(file.path(outdir, guard_png))) {
+        lines <- c(lines, paste0('<h3 style=\"margin-top:18px\">Guard map (AUTO decision)</h3><p style=\"color:#555;font-size:13px;margin:4px 0 8px 0\">Blue=kept SVs, Red=dropped (crossing p or |cor| guards).</p><img src=\"', guard_png, '\" style=\"max-width:760px;width:100%;border:1px solid #e5e7eb;border-radius:12px\" loading=\"lazy\"/>'))
+      }
+      if (exists("sva_sens_row") && !is.null(sva_sens_row) && is.data.frame(sva_sens_row) && nrow(sva_sens_row) > 0) {
+        sr <- sva_sens_row[1, ]
+        lines <- c(lines,
+                   '<h3 style="margin-top:18px">Sample-size matched simulation (safety)</h3>',
+                   paste0('<p style="color:#555;font-size:13px;margin:4px 0 10px 0">Nearest synthetic run: n=', sr$sample_size, ' (', sr$p_thresh_label, ', cap=', sr$cap_mode, ').</p>'),
+                   paste0('<ul><li>Mean FDR: ', signif(sr$mean_fdr,3), '</li><li>Mean TPR: ', signif(sr$mean_tpr,3), '</li><li>Top-100 Jaccard: ', signif(sr$mean_jaccard,3), '</li></ul>')
+        )
+      }
+      lines <- c(lines, '</body></html>')
       writeLines(lines, sens_path)
       message('[done] Wrote sensitivity summary: ', sens_path)
     }, silent=TRUE)

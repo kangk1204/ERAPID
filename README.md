@@ -25,10 +25,10 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    If you see “Missing packages…”, install them once via:  
    `Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("DESeq2","variancePartition","fgsea","msigdbr"))'`
 
-3. **Run a quick test (prepare → analyze)**  
+3. **Run a quick test (download → analysis)**  
    ```bash
-   python erapid.py --gse GSE125583           # prepare phase (downloads data + editable metadata)
-   python erapid.py --gse GSE125583 --phase analyze --group_col group_primary --group_ref Control
+   python erapid.py --gse GSE125583           # download phase (downloads data + editable metadata)
+   python erapid.py --gse GSE125583 --phase analysis --group_col group_primary --group_ref Control
    ```
    This creates `GSE125583/` with DEG, FGSEA, and dashboard outputs under `02_DEG/` and `03_GSEA/`.
 
@@ -45,6 +45,7 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
      --group_col group_primary \
      --out meta_results
    ```
+   `--gse` accepts a comma-separated list for meta runs. For download/analysis, run one GSE at a time (repeat the commands per accession).
    Open `meta_results/index.html` to explore overlap, evidence summaries, and downloads.
 
 **Dependencies recap**
@@ -52,9 +53,11 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
 - R ≥ 4.3 with the Bioconductor/Tidyverse libraries above
 - `curl` (or HTTPS-enabled Python) for GEO downloads
 
+*Legacy note*: older commands using `--phase prepare` or `--phase analyze` still work; they map to `--phase download` and `--phase analysis` respectively.
+
 ## Standard Workflow
 
-1. **Prepare phase – download counts and curate sample groups**
+1. **Download phase – fetch counts and curate sample groups**
 
    ```bash
    python erapid.py --gse GSE125583
@@ -63,12 +66,12 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - Creates `GSE125583/` with `01_GEO_data/`, an editable `GSE125583_coldata_for_edit.tsv`, and heuristic grouping suggestions under `GSE125583__group_selection_suggestions.txt`.
    - Review the TSV and populate `group_primary` (plus optional covariates) before continuing.
 
-2. **Analyze phase – run DESeq2/dream and FGSEA**
+2. **Analysis phase – run DESeq2/dream and FGSEA**
 
    ```bash
    python erapid.py \
      --gse GSE125583 \
-     --phase analyze \
+     --phase analysis \
      --group_col group_primary \
      --group_ref Control \
      --deg_method both \
@@ -82,11 +85,12 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
    - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
    - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference---group_ref) for detailed behavior and examples.
-   - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
-   - Batch/SVA safety defaults (designed to avoid over-correction):
-     - `--sva_auto_skip_n 6` (default): n ≤ 6 → skip SVA entirely and use design-only.
-     - `--sva_corr_p_thresh 0.05` and `--sva_guard_cor_thresh 0.8`: SVs are dropped if they associate with group/known covariates/libsize/zero-fraction/QC at p < 0.05 or |cor| ≥ 0.8.
-     - dream auto-imports DESeq2 AUTO SVs when available; disable with `--no_auto_sv_from_deseq2`. The same guards apply.
+ - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
+ - Batch/SVA safety defaults (designed to avoid over-correction):
+   - `--sva_auto_skip_n 6` (default): n ≤ 6 → skip SVA entirely and use design-only.
+   - `--sva_corr_p_thresh 0.05` and `--sva_guard_cor_thresh 0.8`: SVs are dropped if they associate with group/known covariates/libsize/zero-fraction/QC at p < 0.05 or |cor| ≥ 0.8.
+   - dream auto-imports DESeq2 AUTO SVs when available; disable with `--no_auto_sv_from_deseq2`. The same guards apply.
+  - Per-GSE SVA diagnostics: each run writes an AUTO summary (`02_DEG/*__auto_summary.html`) with an interactive guard map and a sensitivity snapshot (`02_DEG/*__sensitivity.html`) showing sample-size–matched FDR/TPR/Jaccard. Use these to demonstrate AUTO avoided over-correction; there is no shared Supplementary card across GSEs.
 
 3. **Inspect results**
    - Differential expression tables (`02_DEG/`), FGSEA outputs (`03_GSEA/`), and HTML dashboards are written inside the GSE directory.
@@ -106,7 +110,7 @@ How it works:
 Practical tips:
 - Double-check the exact spelling/case in your curated coldata (`Control` ≠ `control`).
 - Include all expected control-like groups in descending priority: e.g. `--group_ref Control,Vehicle,Baseline`.
-- Meta analysis reads whatever orientation you established during the analyze phase; it does not re-level groups. Re-run analyze with the desired `--group_ref` before aggregating if you need to change directionality.
+- Meta analysis reads whatever orientation you established during the analysis phase; it does not re-level groups. Re-run the analysis phase with the desired `--group_ref` before aggregating if you need to change directionality.
 
 If results appear “flipped” (e.g., known control genes show positive log₂ fold change), revisit your `--group_ref` setting first.
 
@@ -167,9 +171,17 @@ python erapid.py \
   --out meta_results
 ```
 
-- `--evidence_keywords` is a comma-separated list handed to `03_deg_evidence.py` to query PubMed/clinical sources for the top-ranked genes. If omitted, ERAPID will reuse keywords discovered during the analyze phase whenever possible.
+- `--evidence_keywords` is a comma-separated list handed to `03_deg_evidence.py` to query PubMed/clinical sources for the top-ranked genes. If omitted, ERAPID will reuse keywords discovered during the analysis phase whenever possible.
 - `--evidence_top_n` controls how many genes feed into the search (default 30).
 - Add `--force_evidence` to generate per-method evidence tables (separate DESeq2 and dream reports) alongside the combined summary.
+
+## What ERAPID Adds (vs GREIN/GEOexplorer)
+
+- **Automated metadata harmonization**: emits curated `*_coldata_for_edit.tsv`, group suggestions, and an interactive coldata browser.
+- **Evidence-ranked candidates**: dual-engine DE (DESeq2 + dream), FGSEA, and an evidence layer that scores genes by padj/log2FC overlap plus literature keywords.
+- **Built-in meta**: one-line aggregation across GSE runs (shared contrasts, UpSet plots, combined evidence tables).
+- **Batch safety defaults**: AUTO SVA guards against over-correction (group/covariate/libsize/zero-fraction), caps SVs by sample size, and writes a guard map + reproducibility metrics to the dashboard.
+- **Shipping example**: `GSE125583_coldata_for_edit.tsv` is prefilled so you can run the Quickstart end-to-end without manual edits.
 
 ## Helpful Flags
 
@@ -179,6 +191,19 @@ python erapid.py \
 - `--group_ref`: sets contrast orientation; see [Group Reference](#group-reference---group_ref) for details.
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
 - `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
+
+## SVA Sensitivity (Supplementary)
+
+- Reproducibility/safety check for the AUTO SVA rule lives in `supplementary/sva_sensitivity/sva_sensitivity.R`. Running `Rscript supplementary/sva_sensitivity.R` regenerates:
+  - `fig_sva_fdr_tpr.png` (FDR/TPR vs. decision thresholds and SV caps),
+  - `fig_sva_jaccard.png` (Jaccard overlap of top100 genes as a reproducibility proxy),
+  - `fig_sva_borderline.png` (PCA + volcano in a borderline p(SV~group) case),
+  - `sva_sensitivity_summary.tsv` (table S1) and `sva_sensitivity_metrics.tsv` (per-replicate metrics).
+- Each run now writes an AUTO guard map and a reproducibility snapshot (Jaccard, DEG overlap) to `02_DEG/*__sensitivity.html` plus the guard PNG; these mirror the simulation defaults for beginner-friendly QA.
+- Empirical guide (synthetic counts with hidden batch):
+  - Small n (≈12): keeping AUTO p<0.05 with a hard cap of 2 SVs lowered FDR (~0.03) while retaining TPR (~0.27); loosening to p<0.10 nudged FDR upward. Prefer design-only if AUTO refuses SVs or if SV~group is strong.
+  - Mid n (≈40): AUTO SVA includes ~0.2–0.3 SVs on average with p<0.05; FDR/TPR stay near baseline (~0.055/0.99) and Jaccard reproducibility ~0.44 whether capped at 2 or auto.
+  - Practical defaults to mirror the study: use `--sva_auto_skip_n 6`, `--sva_corr_p_thresh 0.05`, and `--sva_cap_auto` (sqrt rule, cap 5) for n≥30; for n<20, cap SVs at 2 and keep p<0.05.
 
 For a complete list of arguments, run:
 

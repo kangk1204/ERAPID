@@ -6,10 +6,10 @@ What it does:
 - Creates a new `GSE#####/` folder with subfolders: `01_GEO_data`, `02_DEG`, `03_GSEA`.
 - Downloads NCBI-generated RNA-seq matrices (raw counts + TPM) and GRCh38 annotation
   from the GEO Download page if available.
-- Operates in two phases:
-    1. `--phase prepare` (default): downloads data and emits an editable coldata TSV so
+- Operates in three phases:
+    1. `--phase download` (default; legacy alias: `prepare`): downloads data and emits an editable coldata TSV so
        the analyst can curate `group_primary` manually, plus heuristic suggestions.
-    2. `--phase analyze`: consumes the curated coldata and runs either DESeq2
+    2. `--phase analysis` (legacy alias: `analyze`): consumes the curated coldata and runs either DESeq2
        (02_deseq2_deg.py) or dream mixed models (02_dream_deg.py) followed by FGSEA (03_fgsea.py).
     3. `--phase meta`: aggregates previously generated DEG results from one or more
        GSE folders, producing an UpSet overlap plot and summary tables suitable for
@@ -1233,7 +1233,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
 
         if not patterns:
             if meta_method == 'both':
-                warnings.append(f"{gse_id}: no *__common_deg.tsv files found; run the analyze phase with --deg_method both to generate them.")
+                warnings.append(f"{gse_id}: no *__common_deg.tsv files found; run the analysis phase (--deg_method both) to generate them.")
             else:
                 warnings.append(f"{gse_id}: no DEG TSV files found for method '{meta_method}'.")
             return per_gene, {'gene_count': 0, 'warnings': warnings, 'files_scanned': 0, 'contrast_counts': {}}, {}
@@ -1339,7 +1339,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             missing.append(gse_id)
 
     if missing:
-        print(f"[error] Failed to locate GSE folders for: {', '.join(missing)}. Provide --base_dir or run the analyze phase first.")
+        print(f"[error] Failed to locate GSE folders for: {', '.join(missing)}. Provide --base_dir or run the analysis phase first.")
         return 2
 
     out_dir = args.out.strip() or "meta_results"
@@ -2847,7 +2847,12 @@ def main(argv=None) -> int:
     ap.add_argument("--gse", required=True, help="GSE accession (e.g., GSE125583). For --phase meta, provide a comma-separated list.")
     ap.add_argument("--base_dir", default=".", help="Base directory to create the GSE folder (comma-separated search roots allowed for --phase meta)")
     ap.add_argument("--preset", default="ad", help="Preset for 01_pheno_annot (e.g., ad, cancer, treatment, infection, generic)")
-    ap.add_argument("--phase", choices=["prepare", "analyze", "meta"], default="prepare", help="prepare=download data and build editable coldata; analyze=run DEG/FGSEA assuming group labels are curated; meta=aggregate existing DEG outputs across multiple GSEs")
+    ap.add_argument(
+        "--phase",
+        choices=["download", "analysis", "meta", "prepare", "analyze"],
+        default="download",
+        help="download=fetch data + build editable coldata; analysis=run DEG/FGSEA assuming group labels are curated; meta=aggregate existing DEG outputs across multiple GSEs. (prepare/analyze are kept as aliases)",
+    )
     ap.add_argument("--deg_method", choices=["deseq2", "dream", "both"], default="both", help="Differential expression engine: 'deseq2', 'dream', or run both sequentially (default)")
     ap.add_argument("--deg_lfc_thresh", type=float, default=0.585, help="Absolute log2 fold-change cutoff applied to DEG calling for both DESeq2 and dream (default: 0.585)")
     ap.add_argument("--deg_padj_thresh", type=float, default=0.05, help="Adjusted p-value cutoff applied to DEG calling for DESeq2, dream, and meta analyses (default: 0.05)")
@@ -2908,9 +2913,13 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     initial_priority = [tok.strip() for tok in (args.group_ref or "").split(',') if tok.strip()]
     _set_group_ref_priority(initial_priority)
-    phase = (args.phase or "prepare").lower()
-    if phase not in {"prepare", "analyze", "meta"}:
-        print(f"[error] Invalid --phase value: {phase}")
+    phase_raw = (args.phase or "download").lower()
+    alias_phase = {"prepare": "download", "analyze": "analysis"}
+    if phase_raw in alias_phase:
+        print(f"[warn] --phase {phase_raw} is deprecated; using --phase {alias_phase[phase_raw]} instead.")
+    phase = alias_phase.get(phase_raw, phase_raw)
+    if phase not in {"download", "analysis", "meta"}:
+        print(f"[error] Invalid --phase value: {phase_raw}")
         return 2
     argv_in = list(argv) if argv is not None else sys.argv[1:]
 
@@ -2941,24 +2950,24 @@ def main(argv=None) -> int:
         return _run_meta_phase(args, gse_list)
 
     if len(gse_list) != 1:
-        # Prepare/analyze phases expect exactly one dataset to avoid mixing pipelines.
-        print("[error] Provide exactly one GSE accession for --phase prepare/analyze")
+        # Download/analysis phases expect exactly one dataset to avoid mixing pipelines.
+        print("[error] Provide exactly one GSE accession for --phase download/analysis")
         return 2
 
     user_group_col_input = args.group_col
     auto_group_applied = False
 
     # Configure stage-specific switches so that each CLI phase has a predictable
-    # behaviour.  Prepare always generates curatable metadata, analyze assumes
+    # behaviour.  Download always generates curatable metadata; analysis assumes
     # the user has already reviewed it.
-    if phase == "prepare":
+    if phase == "download":
         if args.skip_pheno:
-            print("[warn] --phase prepare ignores --skip_pheno; phenotype annotation will run to build editable coldata")
+            print("[warn] --phase download ignores --skip_pheno; phenotype annotation will run to build editable coldata")
         args.skip_pheno = False
         args.force_pheno = True
         args.skip_deg = True
         args.skip_fgsea = True
-    elif phase == "analyze":
+    elif phase == "analysis":
         if not args.force_pheno:
             args.skip_pheno = True
 
@@ -3055,7 +3064,7 @@ def main(argv=None) -> int:
     manual_default = os.path.join(geo_dir, f"{gse}_coldata_in_counts_order.tsv")
     manual_model = os.path.join(geo_dir, f"{gse}_coldata_model.tsv")
     manual_edit = os.path.join(gse_dir, f"{gse}_coldata_for_edit.tsv")
-    if phase == "analyze" and not args.coldata:
+    if phase == "analysis" and not args.coldata:
         if os.path.exists(manual_edit):
             args.coldata = manual_edit
         else:
@@ -3074,7 +3083,7 @@ def main(argv=None) -> int:
                     print("[warn] coldata file missing 'gsm' column; downstream may fail")
             except Exception:
                 pass
-        elif phase == "analyze" and not args.force_pheno:
+        elif phase == "analysis" and not args.force_pheno:
             print(f"[info] Requested coldata not found ({requested_coldata}); rerunning phenotype annotation to regenerate")
             args.skip_pheno = False
             args.force_pheno = True
@@ -3100,7 +3109,7 @@ def main(argv=None) -> int:
                     "--counts", counts_path,
                     "--outdir", geo_dir,
                     "--preset", args.preset]
-            if phase == "prepare":
+            if phase == "download":
                 ph_cmd += ["--no_derive_group"]
             code = run(ph_cmd, cwd=None)
             if code != 0:
@@ -3126,7 +3135,7 @@ def main(argv=None) -> int:
         df_coldata_master = None
         print(f"[warn] Failed to load coldata for keyword suggestions: {exc}")
 
-    if phase == "prepare":
+    if phase == "download":
         try:
             import csv as _csv
             import shutil as _shutil
@@ -3196,8 +3205,8 @@ def main(argv=None) -> int:
                     suggestions.append(f"Suggested reference level: {auto_ref_hint}")
             else:
                 suggestions.append("No robust automatic grouping suggestion available; inspect coldata manually.")
-            suggestions.append(f"Edit '{manual_edit}' and fill the 'group_primary' column before running --phase analyze.")
-            suggestions.append(f"Example: python erapid.py --gse {gse} --phase analyze --group_col group_primary --group_ref <REFERENCE_LEVEL>")
+            suggestions.append(f"Edit '{manual_edit}' and fill the 'group_primary' column before running --phase analysis.")
+            suggestions.append(f"Example: python erapid.py --gse {gse} --phase analysis --group_col group_primary --group_ref <REFERENCE_LEVEL>")
             with open(suggestion_txt, 'w', encoding='utf-8') as f:
                 f.write("\n".join(suggestions) + "\n")
             if os.path.exists(manual_edit):
@@ -3207,7 +3216,7 @@ def main(argv=None) -> int:
                     print(f"[info] Editable coldata ready: {manual_edit}")
             if suggestions:
                 print(f"[info] Grouping suggestions saved to: {suggestion_txt}")
-                print(f"[info] After editing the coldata, rerun with --phase analyze (see {suggestion_txt})")
+                print(f"[info] After editing the coldata, rerun with --phase analysis (see {suggestion_txt})")
         except Exception as e:
             print(f"[warn] Failed to build editable coldata or suggestions: {e}")
 
@@ -3411,9 +3420,9 @@ def main(argv=None) -> int:
 
     orig_group_col = user_group_col_input
     levels_now = _uniq_nonempty_levels(coldata_ordered, args.group_col)
-    if phase == "analyze":
+    if phase == "analysis":
         if len(levels_now) < 2:
-            print(f"[error] Group column '{args.group_col}' has fewer than 2 non-empty levels. Edit {manual_edit if os.path.exists(manual_edit) else coldata_ordered} and populate 'group_primary' before running --phase analyze.")
+            print(f"[error] Group column '{args.group_col}' has fewer than 2 non-empty levels. Edit {manual_edit if os.path.exists(manual_edit) else coldata_ordered} and populate 'group_primary' before running --phase analysis.")
             return 2
         # Sync manual edit back into 01_GEO_data for downstream artifacts
         try:
@@ -3458,12 +3467,12 @@ def main(argv=None) -> int:
         print(f"[info] Normalized group_ref levels for whitespace: {', '.join(ref_tokens)} -> {', '.join(sanitized_refs)}")
     if sanitized_refs:
         missing_refs = [tok for tok in sanitized_refs if tok not in group_levels]
-        if phase == "analyze" and missing_refs:
+        if phase == "analysis" and missing_refs:
             print(
                 f"[error] group_ref level(s) not present in sanitized coldata ({', '.join(missing_refs)}). Available levels: {', '.join(group_levels) or 'n/a'}"
             )
             return 2
-        if missing_refs and phase != "analyze":
+        if missing_refs and phase != "analysis":
             print(
                 f"[warn] group_ref level(s) not currently present: {', '.join(missing_refs)} (current levels: {', '.join(group_levels) or 'n/a'})"
             )
@@ -4405,7 +4414,7 @@ function filterTable(inp){{
 
         # Prefer the hand-curated coldata when available, otherwise fall back to
         # the ordered/raw matrices.  This keeps the dashboard aligned with what
-        # analysts actually reviewed before running the analyze phase.
+        # analysts actually reviewed before running the analysis phase.
         primary_col = manual_edit if os.path.exists(manual_edit) else (col_ord if os.path.exists(col_ord) else (col_unord if os.path.exists(col_unord) else ""))
         if primary_col:
             try:
@@ -4470,9 +4479,9 @@ function filterTable(inp){{
         suggestion_txt = os.path.join(gse_dir, f"{gse}__group_selection_suggestions.txt")
         active_coldata = primary_col if primary_col else (col_ord if os.path.exists(col_ord) else (col_unord if os.path.exists(col_unord) else ""))
         # For manuscript review we snapshot the grouping metadata that was
-        # actually used during the analyze phase, so collaborators do not have to
+        # actually used during the analysis phase, so collaborators do not have to
         # infer which reference level was active when DEG outputs were produced.
-        if phase == "analyze" and active_coldata and os.path.exists(active_coldata):
+        if phase == "analysis" and active_coldata and os.path.exists(active_coldata):
             try:
                 import csv as _csv
 
@@ -4494,7 +4503,7 @@ function filterTable(inp){{
                     rel_edit = os.path.relpath(manual_edit, gse_dir)
                     lines.append(f"Editable coldata: {rel_edit}")
                     lines.append("Update group assignments in this file before future reruns if needed.")
-                lines.append(f"Command hint: python erapid.py --gse {gse} --phase analyze --group_col {args.group_col} --group_ref {args.group_ref}")
+                lines.append(f"Command hint: python erapid.py --gse {gse} --phase analysis --group_col {args.group_col} --group_ref {args.group_ref}")
                 with open(suggestion_txt, 'w', encoding='utf-8') as fh:
                     fh.write("\n".join(lines) + "\n")
             except Exception as exc:
@@ -4559,7 +4568,7 @@ function filterTable(inp){{
         # between DESeq2 and dream outputs from a single landing page.
         deg_sections = OrderedDict([
             ("Dashboards", []),
-            ("BIOMARKER EVIDENCE SUMMARIES", []),
+            ("Evidence summaries", []),
             ("Batch Diagnostics", []),
         ])
         deg_index = os.path.join(deg_dir, "index.html")
@@ -4582,7 +4591,7 @@ function filterTable(inp){{
         if summary_tsv:
             summary_path = os.path.join(deg_dir, summary_tsv)
             if os.path.exists(summary_path):
-                deg_sections["BIOMARKER EVIDENCE SUMMARIES"].append((
+                deg_sections["Evidence summaries"].append((
                     "DEG dashboard summary (TSV)",
                     os.path.relpath(summary_path, gse_dir),
                     "download",
@@ -4602,12 +4611,12 @@ function filterTable(inp){{
                     _write_interactive_table(deg_summary, deg_sum_html, f"{gse} — DEG summary")
             except Exception:
                 _write_interactive_table(deg_summary, deg_sum_html, f"{gse} — DEG summary")
-            deg_sections["BIOMARKER EVIDENCE SUMMARIES"].append((
+            deg_sections["Evidence summaries"].append((
                 "DEG summary viewer",
                 os.path.relpath(deg_sum_html, gse_dir),
                 "interactive",
             ))
-            deg_sections["BIOMARKER EVIDENCE SUMMARIES"].append((
+            deg_sections["Evidence summaries"].append((
                 "DEG summary (TSV)",
                 os.path.relpath(deg_summary, gse_dir),
                 "download",
@@ -4621,7 +4630,7 @@ function filterTable(inp){{
             ))
         auto_choice = os.path.join(deg_dir, f"{gse}__{args.group_col}__auto_choice.txt")
         if os.path.exists(auto_choice):
-            deg_sections["BIOMARKER EVIDENCE SUMMARIES"].append((
+            deg_sections["Evidence summaries"].append((
                 "AUTO choice rationale",
                 os.path.relpath(auto_choice, gse_dir),
                 "note",
@@ -4673,14 +4682,14 @@ function filterTable(inp){{
                 if not html_path or not os.path.exists(html_path):
                     continue
                 label_text = rec.get('label') or f"Top {rec.get('top_n', 0)} evidence"
-                deg_sections["BIOMARKER EVIDENCE SUMMARIES"].append((
+                deg_sections["Evidence summaries"].append((
                     label_text,
                     os.path.relpath(html_path, gse_dir),
                     "interactive",
                 ))
                 csv_path = rec.get('csv')
                 if csv_path and os.path.exists(csv_path):
-                    deg_sections["BIOMARKER EVIDENCE SUMMARIES"].append((
+                    deg_sections["Evidence summaries"].append((
                         f"{label_text} (CSV)",
                         os.path.relpath(csv_path, gse_dir),
                         "download",
@@ -4691,6 +4700,8 @@ function filterTable(inp){{
         pca_after_sva = os.path.join(deg_dir, f"{gse}__{args.group_col}__pca_after_sva.html")
         pca_after_design = os.path.join(deg_dir, f"{gse}__{args.group_col}__pca_after_design.html")
         sensitivity = os.path.join(deg_dir, f"{gse}__{args.group_col}__sensitivity.html")
+        auto_guard_png = os.path.join(deg_dir, f"{gse}__{args.group_col}__auto_guard.png")
+        auto_summary_html = os.path.join(deg_dir, f"{gse}__{args.group_col}__auto_summary.html")
         if os.path.exists(sva_heat):
             deg_sections["Batch Diagnostics"].append((
                 "SV–covariate heatmap",
@@ -4720,6 +4731,18 @@ function filterTable(inp){{
                 "Sensitivity (design vs SVA)",
                 os.path.relpath(sensitivity, gse_dir),
                 "interactive",
+            ))
+        if os.path.exists(auto_summary_html):
+            deg_sections["Batch Diagnostics"].append((
+                "AUTO guard map (interactive)",
+                os.path.relpath(auto_summary_html, gse_dir),
+                "interactive",
+            ))
+        if os.path.exists(auto_guard_png):
+            deg_sections["Batch Diagnostics"].append((
+                "AUTO guard map",
+                os.path.relpath(auto_guard_png, gse_dir),
+                "download",
             ))
 
         # Collect 03_GSEA links
@@ -4768,6 +4791,10 @@ function filterTable(inp){{
                 "download",
             ))
 
+        # Supp card removed to avoid cross-GSE confusion; per-GSE AUTO guard/sensitivity
+        # pages are linked above in Batch Diagnostics.
+        supp_sections = OrderedDict()
+
         def _render_sections(section_dict: "OrderedDict[str, List[Tuple[str, str, str]]]") -> str:
             blocks: List[str] = []
             badge_classes = {
@@ -4810,6 +4837,8 @@ function filterTable(inp){{
         data_sections_html = _indent_html(_render_sections(data_sections), 8)
         deg_sections_html = _indent_html(_render_sections(deg_sections), 8)
         gsea_sections_html = _indent_html(_render_sections(gsea_sections), 8)
+        supp_sections_html = ""
+        supp_card_html = ""
 
         html = f"""
 <!DOCTYPE html>
@@ -4986,7 +5015,7 @@ function filterTable(inp){{
           <div class="card__icon" aria-hidden="true">📊</div>
           <div>
             <h2 class="card__title">02_DEG</h2>
-            <p class="card__summary">Differential expression dashboards, biomarker evidence, and batch diagnostics.</p>
+            <p class="card__summary">Differential expression dashboards, candidate evidence summaries, and batch diagnostics.</p>
           </div>
         </header>
 {deg_sections_html}
@@ -5004,6 +5033,7 @@ function filterTable(inp){{
 {gsea_sections_html}
 
       </section>
+{supp_card_html}
     </div>
 
     <p class="tip">Tip: Open links in new tabs to compare dashboards and data side-by-side.</p>
@@ -5038,8 +5068,8 @@ function filterTable(inp){{
     except Exception as e:
         print(f"[warn] Failed to write run metadata: {e}")
 
-    if phase == "prepare":
-        print(f"[next] Review and edit '{manual_edit}' before invoking --phase analyze.")
+    if phase == "download":
+        print(f"[next] Review and edit '{manual_edit}' before invoking --phase analysis.")
 
     print(f"[done] Pipeline complete for {gse}. Results under: {gse_dir}")
     return 0
