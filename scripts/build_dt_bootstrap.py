@@ -93,18 +93,33 @@ def save_interactive_table_html(
                 order_idx = i
                 break
 
-    thead = "<tr>" + "".join(f"<th>{ihtml.escape(str(col))}</th>" for col in df.columns) + "</tr>"
+    # Column-specific classes (e.g., constrain wide text columns like AliasesUsed)
+    col_class_map = {
+        "AliasesUsed": "col-aliases",
+    }
+
+    def _th(col_val: str) -> str:
+        cls = f' class="{col_class_map[col_val]}"' if col_val in col_class_map else ""
+        return f"<th{cls}>{ihtml.escape(str(col_val))}</th>"
+
+    thead = "<tr>" + "".join(_th(str(col)) for col in df.columns) + "</tr>"
     tfoot = thead
 
     body_rows = []
     for row in df.itertuples(index=False):
         tds = []
         for ci, val in enumerate(row):
+            col_name = str(df.columns[ci])
             sval_raw = "" if pd.isna(val) else str(val)
             # Allow raw HTML for selected columns
-            sval = sval_raw if (df.columns[ci] in html_cols) else ihtml.escape(sval_raw)
-            cell_class = ' class="text-end"' if ci in numeric_cols else ""
-            tds.append(f"<td{cell_class}>{sval}</td>")
+            sval = sval_raw if (col_name in html_cols) else ihtml.escape(sval_raw)
+            classes: list[str] = []
+            if ci in numeric_cols:
+                classes.append("text-end")
+            if col_name in col_class_map:
+                classes.append(col_class_map[col_name])
+            class_attr = f' class="{" ".join(classes)}"' if classes else ""
+            tds.append(f"<td{class_attr}>{sval}</td>")
         body_rows.append("<tr>" + "".join(tds) + "</tr>")
     tbody = "\n".join(body_rows)
 
@@ -131,6 +146,13 @@ def save_interactive_table_html(
     .page-title { font-weight: 600; }
     table.dataTable tbody tr:hover { background-color: #f6f9ff; }
     tfoot input { width: 100%; box-sizing: border-box; }
+    /* Prevent long alias lists from blowing out the layout */
+    th.col-aliases, td.col-aliases {
+      max-width: 220px;
+      min-width: 160px;
+      white-space: normal !important;
+      word-break: break-word;
+    }
   </style>
 </head>
 <body>
