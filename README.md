@@ -186,10 +186,10 @@ python erapid.py \
 
 ## SVA Sensitivity (Supplementary)
 
-- Shared simulations (one-time, optional): `Rscript supplementary/sva_sensitivity/sva_sensitivity.R` regenerates the FDR/TPR, Jaccard, borderline-case figures, and summary TSVs. Useful for methods, not needed for routine runs.
-- Per-run items to show reviewers (all inside each `GSE.../02_DEG/`):
-  - `*__auto_summary.html`: interactive guard map + plain-English reason why AUTO kept/dropped SVs.
-  - `*__sensitivity.html`: small-n matched FDR/TPR/Jaccard plus design vs. SVA overlap.
+- Shared simulations (one-time, optional): `Rscript supplementary/sva_sensitivity/sva_sensitivity.R` regenerates the FDR/TPR, Jaccard, borderline-case figures, and summary TSVs. Useful for methods sections; not required for routine runs.
+- Per-run QC outputs (each in `GSE.../02_DEG/`):
+  - `*__auto_summary.html`: interactive guard map plus a plain-English note on why AUTO kept or dropped SVs.
+  - `*__sensitivity.html`: sample-size–matched FDR/TPR/Jaccard and design vs. SVA overlap.
   - `*__auto_guard.png`: static guard plot if you prefer an image.
 - Safe defaults (already baked in): `--sva_auto_skip_n 6`, `--sva_corr_p_thresh 0.05`, `--sva_cap_auto` (sqrt rule, cap 5 for n≥30). For n<20, keep p<0.05 and cap SVs around 2; if AUTO rejects SVs, stick with design-only.
 
