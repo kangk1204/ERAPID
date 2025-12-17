@@ -218,3 +218,25 @@ For a complete list of arguments, run:
 ```bash
 python erapid.py --help
 ```
+
+## Reproduce Manuscript Batch Run
+
+To rerun the same GEO analyses used in the paper, start from the repo root with the ERAPID Conda env active, then execute:
+
+```bash
+conda activate erapid
+bash batch_analysis.sh
+```
+
+You should see progress logs similar to:
+
+```
+[info] Checking NCBI-generated files for GSE95587 ...
+[info] Downloading raw_counts: https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE95587&format=file&file=GSE95587_raw_counts_GRCh38.p13_NCBI.tsv.gz
+[info] Wrote: /home/kangk/projects/00_ERAPID_revision/ERAPID/GSE95587/01_GEO_data/GSE95587_raw_counts_GRCh38.p13_NCBI.tsv.gz
+[info] Downloading fpkm: https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE95587&format=file&file=GSE95587_norm_counts_FPKM_GRCh38.p13_NCBI.tsv.gz
+[info] Wrote: /home/kangk/projects/00_ERAPID_revision/ERAPID/GSE95587/01_GEO_data/GSE95587_norm_counts_FPKM_GRCh38.p13_NCBI.tsv.gz
+[info] Downloading tpm: https://www.ncbi.nlm.nih.gov/geo/download/?type=rnaseq_counts&acc=GSE95587&format=file&file=GSE95587_norm_counts_TPM_GRCh38.p13_NCBI.tsv.gz
+```
+
+The script walks through each manuscript GSE accession, downloading counts, running DEG/FGSEA, and writing dashboards under the corresponding `GSE.../` folders.
