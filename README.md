@@ -6,6 +6,25 @@
 
 `erapid.py` orchestrates an end-to-end RNA-seq workflow for public GEO studies (GSE accessions). The CLI guides you through the same sequence of steps used internally by ERAPID: download/public data cleanup, differential expression, enrichment analysis, and optional evidence aggregation. A third *meta* phase can summarise overlapping signals across multiple GSE runs for manuscript-ready tables and plots.
 
+## Install Git and Conda (one-time)
+
+If you do not already have Git or Conda, install them first. These commands work on a fresh Ubuntu/WSL terminal; macOS users can swap the package manager lines for Homebrew.
+
+```bash
+# Git
+sudo apt update
+sudo apt install -y git          # macOS: brew install git
+git --version                    # verify
+
+# Miniconda (recommended over full Anaconda)
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+source ~/.bashrc                 # or close/reopen the terminal
+conda --version                  # verify
+```
+
+On Windows, install WSL2 with Ubuntu, then run the same commands above inside the WSL terminal.
+
 ## Quickstart
 
 The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or a Unix‑like environment.
