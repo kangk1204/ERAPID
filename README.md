@@ -147,10 +147,13 @@ python erapid.py \
   --group_col group_primary \
   --method both \
   --out meta_results
-```
+   ```
 
 - `--method` accepts `both`, `deseq2`, or `dream` depending on which DEG tables are present.
 - `--base_dir` can list multiple search roots (comma-separated) if GSE folders live outside the repo.
+- Filter specific contrasts in meta with `--meta_include`: pass comma-separated `GSEID:contrast_label` pairs. Example to drop `ad_vs_young_common_deg` but keep `ad_vs_old_common_deg` for GSE153873:  
+  `--meta_include GSE153873:ad_vs_old_common_deg,GSE95587:ad_vs_control_common_deg`  
+  Only listed contrasts are used for those GSEs; any GSE not mentioned keeps all contrasts.
 - Outputs include summary TSVs, an UpSet overlap plot (when `upsetplot` and `matplotlib` are available), and evidence-ready manifests under `meta_results/`.
 - Launch `meta_results/index.html` to review the aggregated dashboard, interactive evidence tables, and quick links to per-contrast outputs.
 

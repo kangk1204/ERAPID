@@ -1216,7 +1216,9 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
                     contrast_entry['aliases'].add(alias.strip())
 
     def _collect_meta_degs_for_gse(gse_id: str, gse_path: str, group_col: str,
-                                   meta_method: str) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], Dict[str, Dict[str, Any]]]:
+                                   meta_method: str,
+                                   meta_include: Optional[Dict[str, set]] = None
+                                   ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any], Dict[str, Dict[str, Any]]]:
         deg_dir = os.path.join(gse_path, "02_DEG")
         warnings: List[str] = []
         per_gene: Dict[str, Dict[str, Any]] = {}
@@ -1239,6 +1241,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             return per_gene, {'gene_count': 0, 'warnings': warnings, 'files_scanned': 0, 'contrast_counts': {}}, {}
 
         files_scanned = 0
+        allowed_contrasts = (meta_include or {}).get(gse_id)
         contrast_meta_local: Dict[str, Dict[str, Any]] = {}
         contrast_gene_sets: Dict[str, set] = {}
 
@@ -1252,6 +1255,8 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             stem = os.path.basename(path)
             stem_no_ext = stem[:-4] if stem.endswith('.tsv') else stem
             simple_label = _simplify_contrast_label(stem_no_ext, gse_id, group_col) or stem_no_ext
+            if allowed_contrasts and simple_label not in allowed_contrasts and stem_no_ext not in allowed_contrasts:
+                continue
             contrast_key = f"{gse_id}:{simple_label}"
             slug = re.sub(r'[^0-9A-Za-z]+', '_', f"{gse_id}_{simple_label}").strip('_')
             contrast_meta_local.setdefault(contrast_key, {
@@ -1303,6 +1308,8 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
                 genes_in_contrast.add(gene_id)
 
         contrast_counts = {key: len(gset) for key, gset in contrast_gene_sets.items()}
+        if allowed_contrasts and not contrast_meta_local:
+            warnings.append(f"{gse_id}: no contrasts matched --meta_include filter ({', '.join(sorted(allowed_contrasts))})")
 
         return per_gene, {
             'gene_count': len(per_gene),
@@ -1318,11 +1325,32 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
         if abs_path not in targets:
             targets.append(abs_path)
 
+    def _parse_meta_include(raw: str) -> Dict[str, set]:
+        out: Dict[str, set] = {}
+        if not raw:
+            return out
+        tokens = [tok.strip() for tok in re.split(r'[;,]+', raw) if tok.strip()]
+        for tok in tokens:
+            if ':' not in tok:
+                continue
+            gse, contrast = tok.split(':', 1)
+            gse = gse.strip()
+            contrast = contrast.strip()
+            if not gse or not contrast:
+                continue
+            out.setdefault(gse, set()).add(contrast)
+        return out
+
     search_dirs: List[str] = []
     _append_search_dir(os.getcwd(), search_dirs)
     base_tokens = [tok.strip() for tok in re.split(r'[;,\s]+', args.base_dir or '.') if tok.strip()]
     for tok in base_tokens:
         _append_search_dir(tok, search_dirs)
+
+    meta_include_map = _parse_meta_include(args.meta_include)
+    if meta_include_map:
+        for gse_id, contrasts in meta_include_map.items():
+            print(f"[info] Meta include filter for {gse_id}: {', '.join(sorted(contrasts))}")
 
     gse_dirs: Dict[str, str] = {}
     missing: List[str] = []
@@ -1356,7 +1384,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
 
     for gse_id in gse_list:
         per_gene, stats, contrast_meta_local = _collect_meta_degs_for_gse(
-            gse_id, gse_dirs[gse_id], args.group_col, meta_method
+            gse_id, gse_dirs[gse_id], args.group_col, meta_method, meta_include_map
         )
         warnings_accum.extend(stats['warnings'])
 
@@ -2858,6 +2886,7 @@ def main(argv=None) -> int:
     ap.add_argument("--deg_padj_thresh", type=float, default=0.05, help="Adjusted p-value cutoff applied to DEG calling for DESeq2, dream, and meta analyses (default: 0.05)")
     ap.add_argument("--method", choices=["deseq2", "dream", "both"], help="Meta-analysis mode (--phase meta). Defaults to --deg_method when unspecified.")
     ap.add_argument("--out", default="", help="Output directory for meta-analysis results (--phase meta)")
+    ap.add_argument("--meta_include", default="", help="Optional comma-separated GSE:contrast pairs to include in meta analysis (filters others out). Example: GSE153873:ad_vs_old_common_deg,GSE95587:ad_vs_control_common_deg. If empty, all contrasts are included.")
     ap.add_argument("--batch_cols", default="", help="Explicit comma-separated batch covariates for DESeq2 design (overrides auto)")
     ap.add_argument("--batch_method", default="auto", choices=["design","sva","combat","auto"], help="design=include covariates; sva=svaseq (adds SVs); auto=diagnose and choose; combat=export ComBat-seq counts only")
     ap.add_argument("--sva_corr_p_thresh", type=float, default=0.05, help="AUTO: if any SV associates with group (ANOVA p < thresh), keep design-only")
