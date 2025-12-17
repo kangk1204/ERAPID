@@ -109,6 +109,8 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - `--sva_auto_skip_n 6` (default): n ≤ 6 → skip SVA entirely and use design-only.
    - `--sva_corr_p_thresh 0.05` and `--sva_guard_cor_thresh 0.8`: SVs are dropped if they associate with group/known covariates/libsize/zero-fraction/QC at p < 0.05 or |cor| ≥ 0.8.
    - dream auto-imports DESeq2 AUTO SVs when available; disable with `--no_auto_sv_from_deseq2`. The same guards apply.
+  
+  **Interpretation of the SVA guard (AUTO mode).** `p < sva_corr_p_thresh` is a *drop* rule, not an inclusion trigger: if an SV shows evidence of tracking the biology/QC at p < 0.05 (or |cor| ≥ guard), AUTO excludes it and falls back to design-only for a more conservative fit. Larger cohorts make small p-values easier, so the same threshold can guard more often; ERAPID pairs this with a deterministic sample-size cap (`--sva_cap_auto`, sqrt rule) and per-run sensitivity reports (`__sensitivity.html`) that show sample-size–matched FDR/TPR/Jaccard. Borderline cases are handled conservatively (drop SVs to avoid over-correction), and every decision is recorded for reproducibility (`__auto_summary.html`, `run_metadata.json`, `--seed`).
   - Per-GSE SVA diagnostics: each run writes an AUTO summary (`02_DEG/*__auto_summary.html`) with an interactive guard map and a sensitivity snapshot (`02_DEG/*__sensitivity.html`) showing sample-size–matched FDR/TPR/Jaccard. Use these to demonstrate AUTO avoided over-correction; there is no shared Supplementary card across GSEs.
 
 3. **Inspect results**
