@@ -245,3 +245,6 @@ You should see progress logs similar to:
 ```
 
 The script walks through each manuscript GSE accession, downloading counts, running DEG/FGSEA, and writing dashboards under the corresponding `GSE.../` folders.
+
+## Citation
+Park, J., Youn, S., Kang, K., & Kang, K. ERAPID: an end‑to‑end RNA‑seq analysis pipeline for integrative candidate biomarker discovery with applications to neuropsychiatric disorders. Methods (San Diego, Calif.), S1046-2023.
