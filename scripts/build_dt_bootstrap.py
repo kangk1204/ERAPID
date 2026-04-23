@@ -19,6 +19,7 @@ import shutil
 from pathlib import Path
 import pandas as pd
 import numpy as np
+from pandas.api.types import is_numeric_dtype
 
 
 ASSET_BUNDLE_ROOT = Path(__file__).resolve().parent / "assets" / "dt"
@@ -78,7 +79,8 @@ def save_interactive_table_html(
     asset_prefix = _ensure_asset_bundle(file_path.parent)
     html_cols = html_cols or []
 
-    numeric_cols = {i for i, dt in enumerate(df.dtypes) if np.issubdtype(dt, np.number)}
+    # pandas 3 string extension dtypes are not understood by np.issubdtype.
+    numeric_cols = {i for i, dt in enumerate(df.dtypes) if is_numeric_dtype(dt)}
     fixed_2dp_cols = {"logfc", "basemean", "aveexpr", "aveexpression"}
     # Prefer ordering by padj or pvalue columns (ascending) when present.
     order_idx = None

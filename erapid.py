@@ -2920,6 +2920,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=-1, help="Set R random seed for DEG/FGSEA (>=0 enables)")
     ap.add_argument("--evidence_top_n", type=int, default=30, help="Top-N genes to inspect for external evidence (default: 30)")
     ap.add_argument("--force_evidence", action="store_true", help="Also collect evidence separately for each DEG method (DESeq2 and dream)")
+    ap.add_argument("--skip_evidence", action="store_true", help="Skip evidence aggregation even when keywords are available")
     # dream-specific options (ignored unless --deg_method dream)
     ap.add_argument("--dream_region_col", default="", help="Column to model as fixed region effect (auto-detected if blank)")
     ap.add_argument("--dream_fixed_effects", default="", help="Comma-separated additional fixed-effect covariates (default auto)")
@@ -4148,7 +4149,9 @@ const payload = `{esc(payload)}`;
     # Run evidence aggregation (top-N gene literature/web search)
     if not args.skip_deg:
         evidence_script = find_helper_script("03_deg_evidence.py")
-        if evidence_script:
+        if args.skip_evidence:
+            print('[info] Skipping evidence aggregation as requested')
+        elif evidence_script:
             evidence_top_n = max(1, int(args.evidence_top_n or 30))
 
             common_tsvs = [

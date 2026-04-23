@@ -50,9 +50,10 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
 3. **Run a quick test (download → analysis)**  
    ```bash
    python erapid.py --gse GSE125583           # download phase (downloads data + editable metadata)
-   python erapid.py --gse GSE125583 --phase analysis --group_col group_primary --group_ref Control
+   cp GSE125583_coldata_for_edit.tsv GSE125583/GSE125583_coldata_for_edit.tsv
+   python erapid.py --gse GSE125583 --phase analysis --group_col group_primary --group_ref control --skip_evidence
    ```
-   This creates `GSE125583/` with DEG, FGSEA, and dashboard outputs under `02_DEG/` and `03_GSEA/`.
+   This creates `GSE125583/` with DEG, FGSEA, and dashboard outputs under `02_DEG/` and `03_GSEA/`. The `cp` step reuses the bundled example curation for a reproducible smoke test; for a real study, edit the generated `GSE125583/GSE125583_coldata_for_edit.tsv` instead of copying the example file. `--skip_evidence` keeps the smoke test deterministic and faster; rerun without it later if you want the optional web/PubMed evidence tables.
 
 4. **Open the dashboard**  
    ```bash
@@ -208,6 +209,7 @@ python erapid.py \
 
 - `--seed`: set an R random seed for reproducibility.
 - `--no_interactive_plots`: skip HTML volcano/MA plots when running headless.
+- `--skip_evidence`: skip optional web/PubMed evidence aggregation during smoke tests or offline runs.
 - `--force_evidence` / `--evidence_top_n`: control the evidence-gathering stage for prioritized genes.
 - `--group_ref`: sets contrast orientation; see [Group Reference](#group-reference) for details.
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.

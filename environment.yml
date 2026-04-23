@@ -25,7 +25,7 @@ dependencies:
   - r-plotly
   - r-htmlwidgets
   - r-htmltools
-  - r-msigdbr
+  - r-msigdbr=25.1.1
   - r-stringr
   - r-ggrepel
   - r-base64enc
