@@ -3,10 +3,11 @@
 Run fgsea on .rnk files using MSigDB gene sets via msigdbr.
 
 What this script does:
-- Loads RNK files (GeneID, rank) produced by the DEG script and runs enrichment.
+- Loads RNK files (identifier, rank) produced by the DEG script and runs enrichment.
+- Auto-detects Entrez / Ensembl / Symbol identifiers per RNK file and matches them to MSigDB.
 - Uses fgseaMultilevel by default (recommended) with optional fallback to fgseaSimple.
 - Retrieves MSigDB gene sets via msigdbr, supporting both old/new argument names.
-- Adds human-readable leading-edge symbols by mapping Entrez IDs from msigdbr.
+- Adds human-readable leading-edge symbols for any supported identifier namespace.
 - Summarizes top pathways across all RNK results for quick inspection.
 
 Usage example:
@@ -19,7 +20,7 @@ Usage example:
     --min_size 15 --max_size 500
 
 Notes for Methods:
-- RNK file format is two columns without a header: Entrez GeneID <TAB> rank.
+- RNK file format is two columns without a header: gene identifier <TAB> rank.
 - We add a tiny Gaussian jitter to ranks by default (configurable via --jitter) to stabilize ties.
 - We record R session info in the output folder for reproducibility.
 """
@@ -29,6 +30,7 @@ from __future__ import annotations
 import argparse
 import glob
 import os
+import re
 import shlex
 import subprocess
 import shutil
@@ -61,6 +63,38 @@ def run(argv, env=None) -> int:
     line = " ".join(shlex.quote(x) for x in argv)
     print(f"[cmd] {line}")
     return subprocess.call(argv, env=env)
+
+
+ENTREZ_ID_RE = re.compile(r"^\d+$")
+ENSEMBL_ID_RE = re.compile(r"^ENS[A-Z0-9]*\d+(?:\.\d+)?$", re.IGNORECASE)
+
+
+def infer_rnk_identifier_mode(ids: list[str]) -> str:
+    tokens = [str(x).strip() for x in ids if str(x).strip()]
+    if not tokens:
+        return "symbol"
+    sample = tokens[:200]
+    frac_entrez = sum(bool(ENTREZ_ID_RE.fullmatch(x)) for x in sample) / len(sample)
+    frac_ensembl = sum(bool(ENSEMBL_ID_RE.fullmatch(x)) for x in sample) / len(sample)
+    if frac_entrez >= 0.8:
+        return "entrez"
+    if frac_ensembl >= 0.5:
+        return "ensembl"
+    return "symbol"
+
+
+def preview_rnk_identifier_mode(path: str, preview_n: int = 200) -> tuple[str, int]:
+    ids: list[str] = []
+    with open(path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            if len(ids) >= preview_n:
+                break
+            if not line.strip():
+                continue
+            token = line.split("\t", 1)[0].strip()
+            if token:
+                ids.append(token)
+    return infer_rnk_identifier_mode(ids), len(ids)
 
 
 def build_r_script(args, rnk_files) -> str:
@@ -122,6 +156,72 @@ def build_r_script(args, rnk_files) -> str:
       set.seed(seed)
       message("[debug] set.seed(", seed, ")")
     }}
+
+    infer_id_mode <- function(ids) {{
+      x <- as.character(ids)
+      x <- trimws(x)
+      x <- x[!is.na(x) & nzchar(x)]
+      if (!length(x)) return("symbol")
+      x <- unique(x)
+      x <- head(x, n=200L)
+      frac_entrez <- mean(grepl("^[0-9]+$", x))
+      frac_ensembl <- mean(grepl("^ENS[A-Z0-9]*[0-9]+(\\\\.[0-9]+)?$", x, ignore.case=TRUE))
+      if (is.finite(frac_entrez) && frac_entrez >= 0.8) return("entrez")
+      if (is.finite(frac_ensembl) && frac_ensembl >= 0.5) return("ensembl")
+      "symbol"
+    }}
+
+    normalize_feature_ids <- function(ids, mode) {{
+      x <- as.character(ids)
+      x <- trimws(x)
+      x[x == ""] <- NA_character_
+      if (mode == "ensembl") {{
+        x <- toupper(x)
+        x <- sub("\\\\.[0-9]+$", "", x)
+      }} else if (mode == "symbol") {{
+        x <- toupper(x)
+      }} else if (mode == "entrez") {{
+        x <- sub("\\\\.[0-9]+$", "", x)
+      }}
+      x
+    }}
+
+    build_pathway_index <- function(tbl, id_col) {{
+      if (!id_col %in% colnames(tbl)) return(list())
+      sub <- tbl[!is.na(tbl[[id_col]]) & nzchar(tbl[[id_col]]), c("gs_name", id_col), drop=FALSE]
+      if (!nrow(sub)) return(list())
+      sub <- unique(sub)
+      split(sub[[id_col]], sub$gs_name)
+    }}
+
+    build_gene_map <- function(tbl, id_col) {{
+      if (!all(c(id_col, "gene_symbol") %in% colnames(tbl))) return(NULL)
+      sub <- tbl[
+        !is.na(tbl[[id_col]]) & nzchar(tbl[[id_col]]) &
+        !is.na(tbl$gene_symbol) & nzchar(tbl$gene_symbol),
+        c(id_col, "gene_symbol"),
+        drop=FALSE
+      ]
+      if (!nrow(sub)) return(NULL)
+      sub <- unique(sub)
+      stats::setNames(sub$gene_symbol, sub[[id_col]])
+    }}
+
+    filter_pathways_for_stats <- function(pathways, stats_names, min_size, max_size) {{
+      if (!length(pathways)) return(list())
+      keep <- vapply(pathways, function(gs) {{
+        n_overlap <- sum(unique(as.character(gs)) %in% stats_names)
+        n_overlap >= min_size && n_overlap <= max_size
+      }}, logical(1))
+      pathways[keep]
+    }}
+
+    count_pathway_overlap <- function(pathways, stats_names) {{
+      if (!length(pathways)) return(0L)
+      overlap_ids <- unique(unlist(pathways, use.names=FALSE))
+      sum(stats_names %in% overlap_ids)
+    }}
+
     # msigdbr >= 10: collection/subcollection; older: category/subcategory
     msig_formals <- names(formals(msigdbr::msigdbr))
     use_new_args <- ("collection" %in% msig_formals)
@@ -174,43 +274,70 @@ def build_r_script(args, rnk_files) -> str:
         }}
       }}
       if (nrow(m) == 0) stop("msigdbr returned no sets for ", set_spec, ". Check species/collection/subcollection.")
-      # Prefer Entrez and symbol mapping
-      entrez_candidates <- c("entrez_gene","ncbi_gene","entrezid","entrez_id")
+      # Prefer target-species identifiers, then DB/source identifiers as fallbacks.
+      entrez_candidates <- c("entrez_gene","ncbi_gene","entrezid","entrez_id","db_ncbi_gene")
+      ensembl_candidates <- c("ensembl_gene","ensembl_gene_id","db_ensembl_gene")
       entrez_col <- intersect(entrez_candidates, colnames(m))
-      if (length(entrez_col) == 0) stop("msigdbr table missing an Entrez ID column; tried: ", paste(entrez_candidates, collapse=","))
-      gene_symbol_candidates <- c("gene_symbol","hgnc_symbol","HGNC.symbol","human_gene_symbol")
+      ensembl_col <- intersect(ensembl_candidates, colnames(m))
+      gene_symbol_candidates <- c("gene_symbol","db_gene_symbol","hgnc_symbol","HGNC.symbol","human_gene_symbol")
       gene_symbol_col <- intersect(gene_symbol_candidates, colnames(m))
-      if (length(gene_symbol_col) > 0) {{
-        m2 <- m %>% dplyr::mutate(entrez = as.character(.data[[entrez_col[1]]]), gene_symbol = as.character(.data[[gene_symbol_col[1]]])) %>% dplyr::select(gs_name, entrez, gene_symbol)
-      }} else {{
-        m2 <- m %>% dplyr::mutate(entrez = as.character(.data[[entrez_col[1]]])) %>% dplyr::select(gs_name, entrez)
+      if (length(entrez_col) == 0 && length(ensembl_col) == 0 && length(gene_symbol_col) == 0) {{
+        stop("msigdbr table missing supported identifier columns; tried Entrez=", paste(entrez_candidates, collapse=","), "; Ensembl=", paste(ensembl_candidates, collapse=","), "; Symbol=", paste(gene_symbol_candidates, collapse=","))
       }}
-      pathways <- split(m2$entrez, m2$gs_name)
-      gene_map <- NULL
-      if ("gene_symbol" %in% colnames(m2)) {{
-        gm <- m2 %>% dplyr::select(entrez, gene_symbol) %>% dplyr::distinct()
-        gene_map <- stats::setNames(gm$gene_symbol, gm$entrez)
-      }}
-      list(pathways = pathways, gene_map = gene_map, label = label)
+      m2 <- tibble::tibble(gs_name = as.character(m$gs_name))
+      if (length(entrez_col) > 0) m2$entrez <- normalize_feature_ids(m[[entrez_col[1]]], "entrez")
+      if (length(ensembl_col) > 0) m2$ensembl <- normalize_feature_ids(m[[ensembl_col[1]]], "ensembl")
+      if (length(gene_symbol_col) > 0) m2$gene_symbol <- normalize_feature_ids(m[[gene_symbol_col[1]]], "symbol")
+      pathways_by_mode <- list(
+        entrez = build_pathway_index(m2, "entrez"),
+        ensembl = build_pathway_index(m2, "ensembl"),
+        symbol = build_pathway_index(m2, "gene_symbol")
+      )
+      gene_map_by_mode <- list(
+        entrez = build_gene_map(m2, "entrez"),
+        ensembl = build_gene_map(m2, "ensembl"),
+        symbol = build_gene_map(m2, "gene_symbol")
+      )
+      list(pathways = pathways_by_mode, gene_map = gene_map_by_mode, label = label)
     }}
 
-    run_one <- function(rnk_path, pathways, gene_map, label) {{
+    run_one <- function(rnk_path, pathways_by_mode, gene_map_by_mode, label) {{
       message("[info] FGSEA on: ", rnk_path, " with set=", label)
       tbl <- readr::read_tsv(rnk_path, col_names=FALSE, show_col_types = FALSE)
       colnames(tbl) <- c("GeneID","rank")
+      id_mode <- infer_id_mode(tbl$GeneID)
+      pathways <- pathways_by_mode[[id_mode]]
+      gene_map <- gene_map_by_mode[[id_mode]]
+      if (is.null(pathways) || !length(pathways)) {{
+        stop("No ", id_mode, " gene-set mapping is available for ", label, ".")
+      }}
       stats <- tbl$rank
-      names(stats) <- as.character(tbl$GeneID)
-      stats <- stats[is.finite(stats)]
+      names(stats) <- normalize_feature_ids(tbl$GeneID, id_mode)
+      keep <- is.finite(stats) & !is.na(names(stats)) & nzchar(names(stats))
+      stats <- stats[keep]
+      stats_names <- names(stats)
       stats <- stats[!duplicated(names(stats))]
       if (is.finite(jitter_sd) && jitter_sd > 0) {{
         if (is.finite(jitter_seed) && jitter_seed >= 0) set.seed(jitter_seed)
         stats <- stats + stats::rnorm(length(stats), sd=jitter_sd)
       }}
       stats <- sort(stats, decreasing=TRUE)
+      usable_pathways <- filter_pathways_for_stats(pathways, names(stats), min_size, max_size)
+      overlap_n <- count_pathway_overlap(pathways, names(stats))
+      message("[info] Inferred identifier mode=", id_mode, "; overlap genes=", overlap_n, "/", length(stats), "; usable pathways=", length(usable_pathways), "/", length(pathways))
+      if (overlap_n == 0) {{
+        stop("No overlap between RNK identifiers (mode=", id_mode, ") and MSigDB set ", label, " for ", basename(rnk_path), ".")
+      }}
+      if (!length(usable_pathways)) {{
+        stop("No pathways remain after applying overlap/min_size/max_size for ", basename(rnk_path), " (mode=", id_mode, ", overlap=", overlap_n, ", min_size=", min_size, ", max_size=", max_size, ").")
+      }}
       if (tolower(method) == "multilevel" || !is.finite(nperm) || nperm <= 0) {{
-        res <- fgsea::fgseaMultilevel(pathways = pathways, stats = stats, minSize = min_size, maxSize = max_size)
+        res <- fgsea::fgseaMultilevel(pathways = usable_pathways, stats = stats, minSize = min_size, maxSize = max_size)
       }} else {{
-        res <- fgsea::fgsea(pathways = pathways, stats = stats, minSize = min_size, maxSize = max_size, nperm = nperm)
+        res <- fgsea::fgsea(pathways = usable_pathways, stats = stats, minSize = min_size, maxSize = max_size, nperm = nperm)
+      }}
+      if (!nrow(res)) {{
+        stop("fgsea returned zero rows for ", basename(rnk_path), " despite ", length(usable_pathways), " usable pathways.")
       }}
       res <- res %>% arrange(padj, pval)
       # Flatten leadingEdge list-column to a comma-separated string for TSV output
@@ -254,8 +381,8 @@ def build_r_script(args, rnk_files) -> str:
             for (i in seq_len(nrow(sub))) {{
               pw <- as.character(sub$pathway[i])
               pw_safe <- gsub("[^0-9A-Za-z._-]+", "_", pw)
-              if (!is.null(pathways[[pw]])) {{
-                g <- fgsea::plotEnrichment(pathways[[pw]], stats) + ggplot2::ggtitle(pw)
+              if (!is.null(usable_pathways[[pw]])) {{
+                g <- fgsea::plotEnrichment(usable_pathways[[pw]], stats) + ggplot2::ggtitle(pw)
                 fn_html <- file.path(ddir, paste0(pw_safe, ".html"))
                 fn_png  <- file.path(ddir, paste0(pw_safe, ".png"))
                 ok <- FALSE
@@ -323,7 +450,7 @@ def build_r_script(args, rnk_files) -> str:
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="Run fgsea on .rnk files using msigdbr gene sets")
+    ap = argparse.ArgumentParser(description="Run fgsea on .rnk files using msigdbr gene sets with auto-detected identifier namespaces")
     ap.add_argument("--rnk_dir", default="02_DEG", help="Directory containing .rnk files")
     ap.add_argument("--outdir", default="03_GSEA")
     ap.add_argument("--species", default="Homo sapiens")
@@ -358,6 +485,10 @@ def main(argv=None) -> int:
     if not rnk_files:
         print(f"[error] No .rnk files found in {args.rnk_dir}", file=sys.stderr)
         return 2
+
+    for path in rnk_files:
+        mode, n_preview = preview_rnk_identifier_mode(path)
+        print(f"[info] RNK identifier preview: {os.path.basename(path)} -> {mode} (n={n_preview})")
 
     os.makedirs(args.outdir, exist_ok=True)
     r_script = build_r_script(args, rnk_files)
