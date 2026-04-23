@@ -33,16 +33,19 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    ```bash
    git clone https://github.com/kangk1204/ERAPID.git
    cd ERAPID
-   conda env create -f environment.yml
-   conda activate erapid
+   conda env create -p ./.conda/erapid -f environment.yml
+   conda activate "$(pwd)/.conda/erapid"
    ```
+   Using a local `--prefix` keeps the install reproducible and avoids collisions with an existing `erapid` environment during reinstalls. If you prefer a named environment on a clean machine, `conda env create -n erapid -f environment.yml` also works.
 
 2. **Check that R and the required packages are available**  
    ```bash
    Rscript -e 'pkgs <- c("DESeq2","variancePartition","fgsea","msigdbr"); missing <- pkgs[!sapply(pkgs, requireNamespace, quietly=TRUE)]; if (length(missing)) { cat("Missing packages:", paste(missing, collapse=", "), "\n"); quit(save="no", status=1); } else { cat("All packages available.\\n"); }'
+   python erapid.py --help | head -n 20
    ```
    If you see “Missing packages…”, install them once via:  
    `Rscript -e 'if (!requireNamespace("BiocManager", quietly=TRUE)) install.packages("BiocManager"); BiocManager::install(c("DESeq2","variancePartition","fgsea","msigdbr"))'`
+   If you are reinstalling into a named environment, remove the old one first (`conda env remove -n erapid`) or switch to the `--prefix` recipe above.
 
 3. **Run a quick test (download → analysis)**  
    ```bash
@@ -98,6 +101,7 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    ```
 
    - Reads the curated coldata, executes DESeq2 and/or dream (`--deg_method`), and launches FGSEA on ranked features.
+   - FGSEA auto-detects Ensembl, Entrez, or gene-symbol RNK inputs. Keep each RNK file namespace-consistent; mixed identifiers can drop whichever ID type is in the minority, and zero-overlap now raises an explicit error instead of silently writing empty enrichment tables.
    - Optional flags:
      - `--auto_batch_cols` to auto-include common covariates (sex/age/tissue) in the design.
    - `--batch_cols age,sex` for an explicit formula.
