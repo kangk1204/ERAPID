@@ -79,6 +79,7 @@ def save_interactive_table_html(
     html_cols = html_cols or []
 
     numeric_cols = {i for i, dt in enumerate(df.dtypes) if np.issubdtype(dt, np.number)}
+    fixed_2dp_cols = {"logfc", "basemean", "aveexpr", "aveexpression"}
     # Prefer ordering by padj or pvalue columns (ascending) when present.
     order_idx = None
     for i, col in enumerate(df.columns):
@@ -111,6 +112,12 @@ def save_interactive_table_html(
         for ci, val in enumerate(row):
             col_name = str(df.columns[ci])
             sval_raw = "" if pd.isna(val) else str(val)
+            col_norm = col_name.lower().replace(".", "").replace("_", "")
+            if ci in numeric_cols and col_norm in fixed_2dp_cols and sval_raw != "":
+                try:
+                    sval_raw = f"{float(val):.2f}"
+                except Exception:
+                    pass
             # Allow raw HTML for selected columns
             sval = sval_raw if (col_name in html_cols) else ihtml.escape(sval_raw)
             classes: list[str] = []

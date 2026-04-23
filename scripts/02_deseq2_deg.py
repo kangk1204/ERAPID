@@ -2913,6 +2913,37 @@ def main(argv=None) -> int:
     except OSError:
         pass
 
+    # Rebuild per-contrast DEG tables with the bundled Bootstrap+DataTables renderer.
+    # The R fallback keeps reports self-contained, but the Python builder is the
+    # intended polished view and uses vendored assets rather than remote CDNs.
+    try:
+        import subprocess as _sp
+        dt_builder = Path(__file__).resolve().parent / "build_dt_bootstrap.py"
+        if dt_builder.is_file():
+            prefix = f"{args.gse}__{args.group_col}__"
+            for tsv_path in sorted(glob.glob(os.path.join(args.outdir, f"{prefix}*__deseq2.tsv"))):
+                base = os.path.basename(tsv_path)
+                if not base.startswith(prefix):
+                    continue
+                contrast = base[len(prefix):-len("__deseq2.tsv")]
+                out_html = os.path.join(args.outdir, f"{prefix}{contrast}__table_dt.html")
+                title = f"{args.gse} — {contrast.replace('__', ' ')} (DEG table)"
+                code_dt = _sp.call([
+                    sys.executable,
+                    str(dt_builder),
+                    "--tsv", tsv_path,
+                    "--out", out_html,
+                    "--title", title,
+                    "--page_len", "50",
+                    "--length_menu", "10,25,50,100,250,500,all",
+                ])
+                if code_dt != 0:
+                    print(f"[warn] DataTables rebuild failed for {tsv_path}")
+        else:
+            print(f"[warn] build_dt_bootstrap.py not found at {dt_builder}")
+    except Exception as exc:
+        print(f"[warn] Failed to rebuild polished DEG tables: {exc}")
+
     # Build an HTML index linking per-contrast outputs (volcano/MA/TSV/RNK)
     try:
         import glob as _glob
