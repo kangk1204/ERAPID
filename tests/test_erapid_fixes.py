@@ -120,6 +120,24 @@ def test_fgsea_jitter_seed_does_not_overwrite_global_seed(fgsea_mod):
     assert "assign('.Random.seed', saved_seed, envir = .GlobalEnv)" in script
 
 
+def test_fgsea_enrichment_plot_hover_includes_gene_identity(fgsea_mod):
+    args = _fgsea_default_args()
+    script = fgsea_mod.build_r_script(args, ["dummy.rnk"])
+    assert "pd_plot <- fgsea::plotEnrichmentData(pathway_hits, stats)" in script
+    assert "Gene: " in script
+    assert "<br>ID: " in script
+    assert "<br>Rank: " in script
+    assert "<br>Rank score: " in script
+    assert "plotly::add_segments" in script
+
+
+def test_fgsea_enrichment_master_index_lists_only_plot_directories(fgsea_mod):
+    args = _fgsea_default_args()
+    script = fgsea_mod.build_r_script(args, ["dummy.rnk"])
+    assert "subs <- list.dirs(plots_root, full.names=FALSE, recursive=FALSE)" in script
+    assert "list.files(plots_root, full.names=FALSE)" not in script
+
+
 def test_fgsea_cli_parses_score_type_and_dedup(fgsea_mod):
     """argparse should accept the new choices and reject bogus values."""
     parser_main = fgsea_mod.main

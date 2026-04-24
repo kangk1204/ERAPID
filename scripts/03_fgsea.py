@@ -412,13 +412,56 @@ def build_r_script(args, rnk_files) -> str:
               pw <- as.character(sub$pathway[i])
               pw_safe <- gsub("[^0-9A-Za-z._-]+", "_", pw)
               if (!is.null(usable_pathways[[pw]])) {{
-                g <- fgsea::plotEnrichment(usable_pathways[[pw]], stats) + ggplot2::ggtitle(pw)
+                pathway_hits <- usable_pathways[[pw]]
+                g <- fgsea::plotEnrichment(pathway_hits, stats, ticksSize = 0.55) + ggplot2::ggtitle(pw)
                 fn_html <- file.path(ddir, paste0(pw_safe, ".html"))
                 fn_png  <- file.path(ddir, paste0(pw_safe, ".png"))
                 ok <- FALSE
                 if (requireNamespace('plotly', quietly=TRUE) && requireNamespace('htmlwidgets', quietly=TRUE)) {{
                   suppressPackageStartupMessages(library(plotly))
                   w <- ggplotly(g)
+                  pd_plot <- fgsea::plotEnrichmentData(pathway_hits, stats)
+                  if (!is.null(pd_plot$ticks) && nrow(pd_plot$ticks) > 0) {{
+                    tick_ranks <- as.integer(pd_plot$ticks$rank)
+                    tick_genes <- names(stats)[tick_ranks]
+                    tick_scores <- as.numeric(stats[tick_ranks])
+                    tick_symbols <- tick_genes
+                    if (!is.null(gene_map)) {{
+                      mapped <- unname(gene_map[as.character(tick_genes)])
+                      tick_symbols[!is.na(mapped) & nzchar(mapped)] <- mapped[!is.na(mapped) & nzchar(mapped)]
+                    }}
+                    spread <- pd_plot$spreadES
+                    if (is.null(spread) || !is.finite(spread) || spread <= 0) {{
+                      spread <- max(abs(pd_plot$curve$ES), na.rm=TRUE)
+                    }}
+                    if (!is.finite(spread) || spread <= 0) spread <- 1
+                    tick_df <- data.frame(
+                      rank = tick_ranks,
+                      y0 = -spread / 10,
+                      y1 = spread / 10,
+                      hover = paste0(
+                        "Gene: ", tick_symbols,
+                        "<br>ID: ", tick_genes,
+                        "<br>Rank: ", tick_ranks,
+                        "<br>Rank score: ", signif(tick_scores, 4)
+                      ),
+                      stringsAsFactors = FALSE
+                    )
+                    w <- plotly::add_segments(
+                      w,
+                      data = tick_df,
+                      x = ~rank,
+                      xend = ~rank,
+                      y = ~y0,
+                      yend = ~y1,
+                      text = ~hover,
+                      hoverinfo = "text",
+                      inherit = FALSE,
+                      name = "pathway genes",
+                      line = list(color = "rgba(15,23,42,0.82)", width = 1.35),
+                      showlegend = FALSE
+                    )
+                  }}
                   htmlwidgets::saveWidget(w, file=fn_html, selfcontained=TRUE)
                   links <- c(links, basename(fn_html)); ok <- TRUE
                 }}
@@ -458,7 +501,7 @@ def build_r_script(args, rnk_files) -> str:
     }}
     # Master index for enrichment plots
     if (isTRUE(make_plots) && dir.exists(plots_root)) {{
-      subs <- list.files(plots_root, full.names=FALSE)
+      subs <- list.dirs(plots_root, full.names=FALSE, recursive=FALSE)
       if (length(subs)) {{
         idx <- file.path(plots_root, 'index.html')
         items <- paste0("<li><a href='", subs, "/index.html'>", subs, "</a></li>", collapse='')
