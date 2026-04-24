@@ -2182,13 +2182,30 @@ def build_r_script(args) -> str:
       message("[debug] Fitting DESeq2 for subset ...")
       dds_sub <- DESeq(dds_sub, parallel=FALSE)
       message("[debug] Fitted; extracting results ...")
-      res <- results(dds_sub, contrast = c(group_col, levelA, levelB), alpha=0.05)
-      # LFC shrinkage (if possible)
+      # Use the user-specified FDR threshold for independent filtering rather than hardcoded 0.05
+      alpha_use <- if (exists('deg_padj_thresh') && is.finite(deg_padj_thresh)) as.numeric(deg_padj_thresh) else 0.05
+      res <- results(dds_sub, contrast = c(group_col, levelA, levelB), alpha=alpha_use)
+      message("[info] Contrast orientation: positive LFC => ", levelA, " upregulated vs ", levelB,
+              " (alpha=", alpha_use, ", nA=", sum(coldata[[group_col]] == levelA),
+              ", nB=", sum(coldata[[group_col]] == levelB), ")")
+      # LFC shrinkage: try apeglm first, fall back to ashr, else report unshrunk with a visible warning
+      shrink_method_used <- NA_character_
       resL <- try(lfcShrink(dds_sub, contrast = c(group_col, levelA, levelB), type = "apeglm"), silent=TRUE)
+      if (inherits(resL, "try-error")) {
+        message("[warn] lfcShrink(apeglm) failed for ", levelA, " vs ", levelB,
+                "; attempting ashr fallback. Error: ", attr(resL, 'condition')$message)
+        resL <- try(lfcShrink(dds_sub, contrast = c(group_col, levelA, levelB), type = "ashr"), silent=TRUE)
+        if (!inherits(resL, "try-error")) shrink_method_used <- "ashr"
+      } else {
+        shrink_method_used <- "apeglm"
+      }
       if (!inherits(resL, "try-error")) {
         res$log2FoldChange_shrunk <- resL$log2FoldChange
+        message("[info] Shrinkage method: ", shrink_method_used)
       } else {
         res$log2FoldChange_shrunk <- NA_real_
+        message("[warn] Both apeglm and ashr failed for ", levelA, " vs ", levelB,
+                "; reporting unshrunk LFC only. Downstream RNK will use unshrunk stat.")
       }
 
       df <- as.data.frame(res)
@@ -2472,8 +2489,8 @@ if ('Symbol' %in% colnames(df)) {
       n_sig <- sum(sel_ok & (df$padj < padj_thr) & (abs(lfc_use) >= lfc_thr), na.rm=TRUE)
       n_up  <- sum(sel_ok & (df$padj < padj_thr) & (lfc_use >=  lfc_thr), na.rm=TRUE)
       n_down<- sum(sel_ok & (df$padj < padj_thr) & (lfc_use <= -lfc_thr), na.rm=TRUE)
-      top_up <- tryCatch({ paste(head(na.omit(df$Symbol[df$padj<0.05 & df$log2FoldChange>0]), 5), collapse=",") }, error=function(e) "")
-      top_down <- tryCatch({ paste(head(na.omit(df$Symbol[df$padj<0.05 & df$log2FoldChange<0]), 5), collapse=",") }, error=function(e) "")
+      top_up <- tryCatch({ paste(head(na.omit(df$Symbol[df$padj<padj_thr & df$log2FoldChange>0]), 5), collapse=",") }, error=function(e) "")
+      top_down <- tryCatch({ paste(head(na.omit(df$Symbol[df$padj<padj_thr & df$log2FoldChange<0]), 5), collapse=",") }, error=function(e) "")
       summ <- list(
         contrast = paste0(levelA, "_vs_", levelB),
         n_genes = nrow(df),
@@ -2500,8 +2517,10 @@ if ('Symbol' %in% colnames(df)) {
       anno_text <- paste0('DEG up: ', n_up_plot, ' · down: ', n_down_plot)
 
       title_core <- paste0(gse_id, ' — ', levelA, ' vs ', levelB)
-      table_dt_html <- paste0(plot_prefix, '__table_dt.html')
-      try(save_interactive_table(df_out, table_dt_html, paste0(title_core, ' (DEG table)'), page_size=50), silent=TRUE)
+      # NOTE: __table_dt.html is generated exclusively by the Python Bootstrap/DataTables
+      # rebuild step (build_dt_bootstrap.py) after this R script returns. The R-side
+      # self-contained fallback has been removed so a pretty, bundled-asset DataTables
+      # view is the only output; failures are now reported loudly by the Python driver.
       volcano_png <- paste0(plot_prefix, '__volcano.png')
       volcano_html <- paste0(plot_prefix, '__volcano.html')
       if (plot_volcano(df, lfc_plot, padj_thresh, lfc_thresh, paste0(title_core, ' (Volcano)'), volcano_png,
@@ -2610,8 +2629,13 @@ if ('Symbol' %in% colnames(df)) {
           sel <- coldata[[group_col]] %in% c(level_test, level_ref)
           dds_s <- dds_in[, sel]; dds_s[[group_col]] <- droplevels(dds_s[[group_col]])
           dds_s <- DESeq(dds_s, parallel=FALSE)
-          res <- results(dds_s, contrast=c(group_col, level_test, level_ref), alpha=0.05)
+          alpha_use_s <- if (exists('deg_padj_thresh') && is.finite(deg_padj_thresh)) as.numeric(deg_padj_thresh) else 0.05
+          res <- results(dds_s, contrast=c(group_col, level_test, level_ref), alpha=alpha_use_s)
           lfc_s <- try(lfcShrink(dds_s, contrast=c(group_col, level_test, level_ref), type='apeglm'), silent=TRUE)
+          if (inherits(lfc_s, 'try-error')) {
+            message('[warn] sensitivity-panel lfcShrink(apeglm) failed for ', level_test, ' vs ', level_ref, '; trying ashr')
+            lfc_s <- try(lfcShrink(dds_s, contrast=c(group_col, level_test, level_ref), type='ashr'), silent=TRUE)
+          }
           lfc_vec <- if (!inherits(lfc_s,'try-error')) as.numeric(lfc_s$log2FoldChange) else as.numeric(res$log2FoldChange)
           padj <- as.numeric(res$padj)
           ok <- is.finite(lfc_vec) & !is.na(padj)
@@ -2914,21 +2938,28 @@ def main(argv=None) -> int:
         pass
 
     # Rebuild per-contrast DEG tables with the bundled Bootstrap+DataTables renderer.
-    # The R fallback keeps reports self-contained, but the Python builder is the
-    # intended polished view and uses vendored assets rather than remote CDNs.
-    try:
-        import subprocess as _sp
-        dt_builder = Path(__file__).resolve().parent / "build_dt_bootstrap.py"
-        if dt_builder.is_file():
-            prefix = f"{args.gse}__{args.group_col}__"
-            for tsv_path in sorted(glob.glob(os.path.join(args.outdir, f"{prefix}*__deseq2.tsv"))):
-                base = os.path.basename(tsv_path)
-                if not base.startswith(prefix):
-                    continue
-                contrast = base[len(prefix):-len("__deseq2.tsv")]
-                out_html = os.path.join(args.outdir, f"{prefix}{contrast}__table_dt.html")
-                title = f"{args.gse} — {contrast.replace('__', ' ')} (DEG table)"
-                code_dt = _sp.call([
+    # The Python builder is the ONLY polished view; the R self-contained fallback was
+    # removed so we never silently ship a plain table. Failures here are fatal-loud:
+    # we print to stderr and continue, but we also tally failures and surface them at
+    # the end so the user knows the HTML output is plain/missing.
+    import subprocess as _sp
+    dt_builder = Path(__file__).resolve().parent / "build_dt_bootstrap.py"
+    _dt_failures: list[str] = []
+    if not dt_builder.is_file():
+        print(f"[error] build_dt_bootstrap.py not found at {dt_builder}. "
+              "Interactive DEG tables will NOT be generated.", file=sys.stderr)
+        _dt_failures.append(str(dt_builder))
+    else:
+        prefix = f"{args.gse}__{args.group_col}__"
+        for tsv_path in sorted(glob.glob(os.path.join(args.outdir, f"{prefix}*__deseq2.tsv"))):
+            base = os.path.basename(tsv_path)
+            if not base.startswith(prefix):
+                continue
+            contrast = base[len(prefix):-len("__deseq2.tsv")]
+            out_html = os.path.join(args.outdir, f"{prefix}{contrast}__table_dt.html")
+            title = f"{args.gse} — {contrast.replace('__', ' ')} (DEG table)"
+            proc = _sp.run(
+                [
                     sys.executable,
                     str(dt_builder),
                     "--tsv", tsv_path,
@@ -2936,13 +2967,25 @@ def main(argv=None) -> int:
                     "--title", title,
                     "--page_len", "50",
                     "--length_menu", "10,25,50,100,250,500,all",
-                ])
-                if code_dt != 0:
-                    print(f"[warn] DataTables rebuild failed for {tsv_path}")
-        else:
-            print(f"[warn] build_dt_bootstrap.py not found at {dt_builder}")
-    except Exception as exc:
-        print(f"[warn] Failed to rebuild polished DEG tables: {exc}")
+                ],
+                capture_output=True,
+                text=True,
+            )
+            if proc.returncode != 0:
+                print(f"[error] DataTables rebuild FAILED for {tsv_path} "
+                      f"(exit={proc.returncode}). stderr:\n{proc.stderr}",
+                      file=sys.stderr)
+                _dt_failures.append(tsv_path)
+            else:
+                if not os.path.exists(out_html):
+                    print(f"[error] DataTables builder returned 0 but {out_html} missing; "
+                          "check pandas/numpy install and asset bundle.", file=sys.stderr)
+                    _dt_failures.append(tsv_path)
+    if _dt_failures:
+        print(f"[error] {len(_dt_failures)} DEG table(s) were NOT rendered with "
+              "Bootstrap+DataTables. Install pandas/numpy in the driver Python or "
+              "restore tools/ERAPID/scripts/assets/dt/ before rerunning.",
+              file=sys.stderr)
 
     # Build an HTML index linking per-contrast outputs (volcano/MA/TSV/RNK)
     try:
