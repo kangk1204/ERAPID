@@ -939,9 +939,12 @@ def pick_top_genes(deg_path: str, top_n: int, contrast_name: str) -> pd.DataFram
     df = pd.read_table(deg_path)
     if 'adj.P.Val' not in df.columns:
         if 'padj' in df.columns:
+            # Legitimate rename: DESeq2's `padj` IS the BH-adjusted p-value.
             df['adj.P.Val'] = df['padj']
-        elif 'P.Value' in df.columns:
-            df['adj.P.Val'] = df['P.Value']
+        # NOTE: previously a silent fallback copied P.Value into adj.P.Val when no
+        # adjusted column was present. That deceived downstream consumers into
+        # treating unadjusted p-values as FDR-controlled. We now leave adj.P.Val
+        # missing and let pick_top_genes fall back explicitly by `ranked_by`.
 
     if 'P.Value' not in df.columns:
         if 'pvalue' in df.columns:
@@ -956,9 +959,25 @@ def pick_top_genes(deg_path: str, top_n: int, contrast_name: str) -> pd.DataFram
     required = {"GeneID", "P.Value"}
     if not required.issubset(set(df.columns)):
         raise ValueError(f"Missing required columns in {deg_path}: {required - set(df.columns)}")
-    df = df.sort_values("P.Value", ascending=True).head(top_n).copy()
+    # Rank by the composite key (adj.P.Val ASC, P.Value ASC). Rationale:
+    #   - Primary by adj.P.Val groups FDR-significant hits ahead of non-significant.
+    #   - Secondary by P.Value preserves within-group rank resolution because
+    #     Benjamini-Hochberg cumulative-max pooling often produces large ties
+    #     in padj (e.g., all=1.0 when nothing survives FDR); pure padj ranking
+    #     would then degenerate. The unadjusted p-value is the information-
+    #     preserving tiebreaker.
+    # If adj.P.Val is absent or all-NaN we fall back to P.Value alone.
+    sort_cols = ["P.Value"]
+    ranked_by = "P.Value"
+    if "adj.P.Val" in df.columns and df["adj.P.Val"].notna().any():
+        sort_cols = ["adj.P.Val", "P.Value"]
+        ranked_by = "adj.P.Val,P.Value"
+    df = df.sort_values(
+        sort_cols, ascending=True, na_position="last", kind="mergesort"
+    ).head(top_n).copy()
     df.insert(0, "contrast", contrast_name)
     df.insert(1, "rank", range(1, len(df) + 1))
+    df.insert(2, "ranked_by", ranked_by)
     return df
 
 
