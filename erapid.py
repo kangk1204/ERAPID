@@ -2422,6 +2422,50 @@ def _build_combined_deg_dashboard(
 
     return info
 
+def _select_common_heatmap_gene_ids(
+    df_sorted: pd.DataFrame,
+    gene_col: str,
+    expr_index: Iterable[Any],
+    max_genes: int = 200,
+) -> List[str]:
+    """Choose common DEG heatmap genes without letting one direction crowd out the other."""
+
+    expr_ids = {str(x) for x in expr_index}
+
+    def _valid_ids(frame: pd.DataFrame) -> List[str]:
+        ids: List[str] = []
+        seen: set[str] = set()
+        for raw_id in frame[gene_col].tolist():
+            gid = str(raw_id).strip()
+            if not gid or gid.lower() in {'nan', 'none'}:
+                continue
+            if gid in expr_ids and gid not in seen:
+                ids.append(gid)
+                seen.add(gid)
+        return ids
+
+    if max_genes <= 0:
+        return []
+
+    if 'Direction' in df_sorted.columns:
+        up_df = df_sorted[df_sorted['Direction'].astype(str).str.lower() == 'up']
+        down_df = df_sorted[df_sorted['Direction'].astype(str).str.lower() == 'down']
+        up_ids = _valid_ids(up_df)
+        down_ids = _valid_ids(down_df)
+
+        if up_ids and down_ids:
+            quota = max(1, max_genes // 2)
+            selected = up_ids[:quota] + down_ids[:quota]
+            used = set(selected)
+            remaining_slots = max_genes - len(selected)
+            if remaining_slots > 0:
+                remainder = [gid for gid in _valid_ids(df_sorted) if gid not in used]
+                selected.extend(remainder[:remaining_slots])
+            return selected[:max_genes]
+
+    return _valid_ids(df_sorted)[:max_genes]
+
+
 def _generate_common_heatmap(
     base: str,
     common_df: pd.DataFrame,
@@ -2488,14 +2532,7 @@ def _generate_common_heatmap(
         return None
 
     max_genes = 200
-    gene_ids: List[str] = []
-    for raw_id in df_sorted[gene_col].tolist():
-        gid = str(raw_id).strip()
-        if not gid or gid.lower() in {'nan', 'none'}:
-            continue
-        if gid in expr_df.index:
-            gene_ids.append(gid)
-    gene_ids = gene_ids[:max_genes]
+    gene_ids = _select_common_heatmap_gene_ids(df_sorted, gene_col, expr_df.index, max_genes=max_genes)
     # Allow a single common gene to render a 1-row heatmap for completeness.
     if len(gene_ids) < 1:
         return None

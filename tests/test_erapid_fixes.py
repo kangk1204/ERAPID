@@ -47,6 +47,11 @@ def deseq2_mod():
     return _load("erapid_deseq2", SCRIPTS_DIR / "02_deseq2_deg.py")
 
 
+@pytest.fixture(scope="module")
+def erapid_mod():
+    return _load("erapid_driver", ERAPID_ROOT / "erapid.py")
+
+
 # ---------------------------------------------------------------------------
 # 03_fgsea.py  — score_type, dedup strategy, seed isolation
 # ---------------------------------------------------------------------------
@@ -299,3 +304,27 @@ def test_erapid_deg_dt_rebuild_skips_deseq2_and_does_not_write_vanilla():
     assert "continue" in block
     assert "_write_vanilla_table(tsv, out_html" not in block
     assert "DataTables rebuild FAILED" in block
+
+
+def test_common_heatmap_gene_selection_balances_up_and_down(erapid_mod):
+    common_df = pd.DataFrame(
+        {
+            "GeneID": [f"UP{i:03d}" for i in range(250)] + [f"DN{i:03d}" for i in range(250)],
+            "Direction": ["Up"] * 250 + ["Down"] * 250,
+            "logFC": [250 - i for i in range(250)] + [-(250 - i) for i in range(250)],
+        }
+    )
+    common_df["__dir_rank"] = common_df["Direction"].map({"Up": 0, "Down": 1})
+    common_df["__abs_lfc"] = common_df["logFC"].abs()
+    sorted_df = common_df.sort_values(["__dir_rank", "__abs_lfc"], ascending=[True, False])
+
+    selected = erapid_mod._select_common_heatmap_gene_ids(
+        sorted_df,
+        "GeneID",
+        common_df["GeneID"],
+        max_genes=200,
+    )
+
+    assert len(selected) == 200
+    assert sum(g.startswith("UP") for g in selected) == 100
+    assert sum(g.startswith("DN") for g in selected) == 100
