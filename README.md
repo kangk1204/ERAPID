@@ -108,6 +108,7 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - `--batch_cols age,sex` for an explicit formula.
    - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
    - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
+   - `--fgsea_score_type std|pos|neg` to control fgsea's score type (default `std`), and `--fgsea_dedup_strategy maxabs|first` to choose how duplicate RNK identifiers are collapsed before enrichment.
    - `--group_ref Control,Treated` sets the *reference (denominator) order* for every contrast. See [Group Reference](#group-reference) for detailed behavior and examples.
  - `--skip_fgsea` or `--skip_deg` to shorten the workflow when debugging.
  - Batch/SVA safety defaults (designed to avoid over-correction):
@@ -214,6 +215,8 @@ python erapid.py \
 - `--group_ref`: sets contrast orientation; see [Group Reference](#group-reference) for details.
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
 - `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
+- `--sva_auto_skip_n`, `--sva_guard_cor_thresh`, `--no_auto_sv_from_deseq2`: expose SVA guard controls from the underlying DESeq2/dream scripts.
+- `--fgsea_score_type`, `--fgsea_dedup_strategy`: pass fgsea score-type and RNK duplicate-collapsing policy through the top-level workflow.
 
 ## SVA Sensitivity (Supplementary)
 

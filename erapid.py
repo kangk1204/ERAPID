@@ -2890,6 +2890,8 @@ def main(argv=None) -> int:
     ap.add_argument("--batch_cols", default="", help="Explicit comma-separated batch covariates for DESeq2 design (overrides auto)")
     ap.add_argument("--batch_method", default="auto", choices=["design","sva","combat","auto"], help="design=include covariates; sva=svaseq (adds SVs); auto=diagnose and choose; combat=export ComBat-seq counts only")
     ap.add_argument("--sva_corr_p_thresh", type=float, default=0.05, help="AUTO: if any SV associates with group (ANOVA p < thresh), keep design-only")
+    ap.add_argument("--sva_guard_cor_thresh", type=float, default=0.8, help="AUTO: |cor(SV, libsize/zero-fraction/QC)| threshold that triggers SV rejection")
+    ap.add_argument("--sva_auto_skip_n", type=int, default=6, help="AUTO: if sample count <= n, skip SVA entirely and use design-only (0 disables)")
     ap.add_argument("--sva_max_sv", type=int, default=10, help="Max SVs to include for SVA/AUTO (<=0 means no cap). Use --sva_cap_auto/--no_sva_cap_auto to control automatic cap by sample size")
     ap.add_argument("--sva_cap_auto", dest="sva_cap_auto", action="store_true", default=True, help="Enable automatic SV cap by sample size (sqrt-rule; upper bound 10)")
     ap.add_argument("--no_sva_cap_auto", dest="sva_cap_auto", action="store_false", help="Disable automatic SV cap; only --sva_max_sv applies if >0")
@@ -2902,6 +2904,8 @@ def main(argv=None) -> int:
     ap.add_argument("--group_col", default="group_primary", help="Grouping column for DEGs (use 'auto' to detect from coldata)")
     ap.add_argument("--group_ref", default="Control", help="Reference/contrast anchor for DEGs (can be comma-separated)")
     ap.add_argument("--msig_sets", default="", help="Comma-separated MSigDB sets; empty = use fgsea default list")
+    ap.add_argument("--fgsea_score_type", choices=["std", "pos", "neg"], default="std", help="fgsea scoreType passed to 03_fgsea.py")
+    ap.add_argument("--fgsea_dedup_strategy", choices=["maxabs", "first"], default="maxabs", help="Collapse duplicate RNK identifiers by max |stat| or first occurrence")
     ap.add_argument("--rscript", default="", help="Path to Rscript for 02/03 scripts (optional)")
     ap.add_argument("--no_interactive_plots", action="store_true", help="Disable interactive HTML plots (volcano/MA) during DEG")
     ap.add_argument("--deseq2_min_samples", type=int, default=0, help="Minimum sample count required for DESeq2 prefilter; <=0 uses ceil(n/2)")
@@ -2921,6 +2925,7 @@ def main(argv=None) -> int:
     ap.add_argument("--evidence_top_n", type=int, default=30, help="Top-N genes to inspect for external evidence (default: 30)")
     ap.add_argument("--force_evidence", action="store_true", help="Also collect evidence separately for each DEG method (DESeq2 and dream)")
     ap.add_argument("--skip_evidence", action="store_true", help="Skip evidence aggregation even when keywords are available")
+    ap.add_argument("--no_auto_sv_from_deseq2", dest="auto_sv_from_deseq2", action="store_false", default=True, help="Disable dream auto-import of DESeq2 AUTO SV TSV")
     # dream-specific options (ignored unless --deg_method dream)
     ap.add_argument("--dream_region_col", default="", help="Column to model as fixed region effect (auto-detected if blank)")
     ap.add_argument("--dream_fixed_effects", default="", help="Comma-separated additional fixed-effect covariates (default auto)")
@@ -3671,7 +3676,12 @@ def main(argv=None) -> int:
                 if args.batch_method:
                     deg_cmd += ["--batch_method", args.batch_method]
                 if args.batch_method in ("sva", "auto"):
-                    deg_cmd += ["--sva_corr_p_thresh", str(args.sva_corr_p_thresh), "--sva_max_sv", str(args.sva_max_sv)]
+                    deg_cmd += [
+                        "--sva_corr_p_thresh", str(args.sva_corr_p_thresh),
+                        "--sva_guard_cor_thresh", str(args.sva_guard_cor_thresh),
+                        "--sva_auto_skip_n", str(args.sva_auto_skip_n),
+                        "--sva_max_sv", str(args.sva_max_sv),
+                    ]
                     if args.sva_cap_auto:
                         deg_cmd += ["--sva_cap_auto"]
                     if args.export_sva:
@@ -3898,6 +3908,13 @@ def main(argv=None) -> int:
                     dream_cmd += ["--center_scale_numeric"]
                 if args.dream_robust_scale:
                     dream_cmd += ["--robust_scale_numeric"]
+                dream_cmd += [
+                    "--sva_corr_p_thresh", str(args.sva_corr_p_thresh),
+                    "--sva_guard_cor_thresh", str(args.sva_guard_cor_thresh),
+                    "--sva_auto_skip_n", str(args.sva_auto_skip_n),
+                ]
+                if not args.auto_sv_from_deseq2:
+                    dream_cmd += ["--no_auto_sv_from_deseq2"]
                 if args.dream_voom_span is not None:
                     dream_cmd += ["--voom_span", str(args.dream_voom_span)]
                 if args.seed is not None and args.seed >= 0:
@@ -4094,7 +4111,13 @@ const payload = `{esc(payload)}`;
                 with open(out_html, 'w', encoding='utf-8') as fh:
                     fh.write(html)
 
+            _dt_failures = []
             for method in deg_methods_ran:
+                if method == "deseq2":
+                    # 02_deseq2_deg.py owns its Bootstrap/DataTables rebuild and
+                    # reports failures loudly; rerunning here can overwrite a
+                    # helper-verified rich table with a degraded fallback.
+                    continue
                 suffix = "__deseq2.tsv" if method == "deseq2" else "__dream.tsv"
                 pattern = os.path.join(deg_dir, f"{gse}__{args.group_col}__*{suffix}")
                 for tsv in _glob.glob(pattern):
@@ -4105,14 +4128,27 @@ const payload = `{esc(payload)}`;
                         import subprocess as _sp
                         _script = os.path.join(os.path.dirname(__file__), 'scripts', 'build_dt_bootstrap.py')
                         if os.path.isfile(_script):
-                            code_dt = _sp.call([sys.executable, _script, '--tsv', tsv, '--out', out_html, '--title', f"{gse} — {contrast} (DEG table)", '--page_len', str(_DT_PAGELEN), '--length_menu', args.dt_length_menu])
-                            if code_dt != 0:
-                                _write_vanilla_table(tsv, out_html, f"{gse} — {contrast} (DEG table)")
+                            proc = _sp.run(
+                                [sys.executable, _script, '--tsv', tsv, '--out', out_html, '--title', f"{gse} — {contrast} (DEG table)", '--page_len', str(_DT_PAGELEN), '--length_menu', args.dt_length_menu],
+                                capture_output=True,
+                                text=True,
+                            )
+                            if proc.returncode != 0:
+                                print(f"[error] DataTables rebuild FAILED for {tsv} (exit={proc.returncode}). stderr:\n{proc.stderr}", file=sys.stderr)
+                                _dt_failures.append(tsv)
+                            elif not os.path.exists(out_html):
+                                print(f"[error] DataTables builder returned 0 but {out_html} is missing.", file=sys.stderr)
+                                _dt_failures.append(tsv)
+                            else:
+                                print("[info] Wrote DT table:", out_html)
                         else:
-                            _write_vanilla_table(tsv, out_html, f"{gse} — {contrast} (DEG table)")
-                    except Exception:
-                        _write_vanilla_table(tsv, out_html, f"{gse} — {contrast} (DEG table)")
-                    print("[info] Wrote DT table:", out_html)
+                            print(f"[error] build_dt_bootstrap.py not found at {_script}; interactive DEG table not generated for {tsv}", file=sys.stderr)
+                            _dt_failures.append(tsv)
+                    except Exception as exc:
+                        print(f"[error] Failed to rebuild DataTables table for {tsv}: {exc}", file=sys.stderr)
+                        _dt_failures.append(tsv)
+            if _dt_failures:
+                print(f"[error] {len(_dt_failures)} dream DEG table(s) were NOT rendered with Bootstrap+DataTables.", file=sys.stderr)
         except Exception as e:
             print("[warn] Failed to write DataTables tables:", e)
 
@@ -4255,6 +4291,7 @@ const payload = `{esc(payload)}`;
                   "--outdir", gsea_dir]
         if args.msig_sets:
             fg_cmd += ["--msig_sets", args.msig_sets]
+        fg_cmd += ["--score_type", args.fgsea_score_type, "--dedup_strategy", args.fgsea_dedup_strategy]
         if args.seed is not None and args.seed >= 0:
             fg_cmd += ["--seed", str(args.seed)]
         if args.rscript:
