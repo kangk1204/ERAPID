@@ -141,6 +141,16 @@ def build_r_script(args, rnk_files) -> str:
     jitter_sd <- as.numeric({getattr(args, 'jitter', 0.0)})
     jitter_seed <- as.integer({getattr(args, 'jitter_seed', -1)})
     seed <- as.integer({getattr(args, 'seed', -1)})
+    score_type <- {_r_str(getattr(args, 'score_type', 'std'))}
+    if (!(score_type %in% c('std','pos','neg'))) {{
+      message('[warn] Unknown --score_type=', score_type, '; falling back to std')
+      score_type <- 'std'
+    }}
+    dedup_strategy <- {_r_str(getattr(args, 'dedup_strategy', 'maxabs'))}
+    if (!(dedup_strategy %in% c('first','maxabs'))) {{
+      message('[warn] Unknown --dedup_strategy=', dedup_strategy, '; falling back to maxabs')
+      dedup_strategy <- 'maxabs'
+    }}
     make_plots <- { 'TRUE' if getattr(args, 'enrich_plots', True) else 'FALSE' }
     plots_top  <- as.integer({getattr(args, 'enrich_top', 20)})
     plots_padj <- as.numeric({getattr(args, 'enrich_padj', 0.05)})
@@ -315,11 +325,27 @@ def build_r_script(args, rnk_files) -> str:
       names(stats) <- normalize_feature_ids(tbl$GeneID, id_mode)
       keep <- is.finite(stats) & !is.na(names(stats)) & nzchar(names(stats))
       stats <- stats[keep]
-      stats_names <- names(stats)
-      stats <- stats[!duplicated(names(stats))]
+      # Deduplicate by identifier. Default strategy 'maxabs' keeps the row with the
+      # strongest absolute signal (important for symbol-collapsed ranks); 'first'
+      # retains legacy behavior for reproducibility with older outputs.
+      if (dedup_strategy == 'maxabs' && any(duplicated(names(stats)))) {{
+        ord <- order(abs(stats), decreasing = TRUE)
+        stats <- stats[ord]
+        stats <- stats[!duplicated(names(stats))]
+      }} else {{
+        stats <- stats[!duplicated(names(stats))]
+      }}
       if (is.finite(jitter_sd) && jitter_sd > 0) {{
-        if (is.finite(jitter_seed) && jitter_seed >= 0) set.seed(jitter_seed)
-        stats <- stats + stats::rnorm(length(stats), sd=jitter_sd)
+        # Use a local RNG stream so a user-provided --jitter_seed does NOT overwrite
+        # the global FGSEA reproducibility seed set earlier from --seed.
+        if (is.finite(jitter_seed) && jitter_seed >= 0) {{
+          saved_seed <- if (exists('.Random.seed', envir = .GlobalEnv)) get('.Random.seed', envir = .GlobalEnv) else NULL
+          set.seed(jitter_seed)
+          stats <- stats + stats::rnorm(length(stats), sd=jitter_sd)
+          if (!is.null(saved_seed)) assign('.Random.seed', saved_seed, envir = .GlobalEnv)
+        }} else {{
+          stats <- stats + stats::rnorm(length(stats), sd=jitter_sd)
+        }}
       }}
       stats <- sort(stats, decreasing=TRUE)
       usable_pathways <- filter_pathways_for_stats(pathways, names(stats), min_size, max_size)
@@ -332,9 +358,13 @@ def build_r_script(args, rnk_files) -> str:
         stop("No pathways remain after applying overlap/min_size/max_size for ", basename(rnk_path), " (mode=", id_mode, ", overlap=", overlap_n, ", min_size=", min_size, ", max_size=", max_size, ").")
       }}
       if (tolower(method) == "multilevel" || !is.finite(nperm) || nperm <= 0) {{
-        res <- fgsea::fgseaMultilevel(pathways = usable_pathways, stats = stats, minSize = min_size, maxSize = max_size)
+        res <- fgsea::fgseaMultilevel(pathways = usable_pathways, stats = stats,
+                                      minSize = min_size, maxSize = max_size,
+                                      scoreType = score_type)
       }} else {{
-        res <- fgsea::fgsea(pathways = usable_pathways, stats = stats, minSize = min_size, maxSize = max_size, nperm = nperm)
+        res <- fgsea::fgsea(pathways = usable_pathways, stats = stats,
+                            minSize = min_size, maxSize = max_size, nperm = nperm,
+                            scoreType = score_type)
       }}
       if (!nrow(res)) {{
         stop("fgsea returned zero rows for ", basename(rnk_path), " despite ", length(usable_pathways), " usable pathways.")
@@ -470,8 +500,12 @@ def main(argv=None) -> int:
     ap.add_argument("--method", choices=["multilevel","simple"], default="multilevel", help="fgsea algorithm: multilevel (recommended) or simple")
     ap.add_argument("--nperm", type=int, default=0, help="Number of permutations for simple method (ignored for multilevel; set >0 to force simple)")
     ap.add_argument("--jitter", type=float, default=1e-12, help="Optional Gaussian jitter (sd) added to ranks to break ties (default 1e-12)")
-    ap.add_argument("--jitter_seed", type=int, default=-1, help="Optional RNG seed for jitter (>=0 to enable)")
+    ap.add_argument("--jitter_seed", type=int, default=-1, help="Optional RNG seed for jitter (>=0 to enable). Does not clobber --seed.")
     ap.add_argument("--seed", type=int, default=-1, help="Set R random seed for reproducibility (>=0 enables)")
+    ap.add_argument("--score_type", choices=["std", "pos", "neg"], default="std",
+                    help="fgsea scoreType: std (two-sided, default), pos (positive-only), neg (negative-only)")
+    ap.add_argument("--dedup_strategy", choices=["maxabs", "first"], default="maxabs",
+                    help="How to collapse duplicate identifiers in the RNK: keep row with largest |stat| (maxabs, default) or first (legacy)")
     ap.add_argument("--rscript", default="", help="Path to Rscript (optional; defaults to PATH)")
     ap.add_argument("--r_conda_prefix", default="", help="Explicit CONDA_PREFIX to use inside R (optional)")
     ap.add_argument("--top_k", type=int, default=20, help="Top K pathways per result to summarize")
