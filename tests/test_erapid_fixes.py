@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -18,6 +19,7 @@ import pandas as pd
 import pytest
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
+ERAPID_ROOT = SCRIPTS_DIR.parent
 
 
 def _load(name: str, path: Path):
@@ -243,3 +245,57 @@ def test_deseq2_dt_rebuild_is_not_silenced(deseq2_mod):
     assert "_dt_failures" in src
     assert "capture_output=True" in src
     assert "[error] DataTables rebuild FAILED" in src
+
+
+def test_deseq2_dt_rebuild_uses_dashboard_filename_contract(deseq2_mod):
+    expected = "GSE1__group_primary__case_vs_control__deseq2__table_dt.html"
+    assert (
+        deseq2_mod.deseq2_table_dt_filename("GSE1", "group_primary", "case_vs_control")
+        == expected
+    )
+    assert (
+        deseq2_mod.deseq2_table_dt_filename("GSE1", "group_primary", "case_vs_control__deseq2")
+        == expected
+    )
+
+    src = (SCRIPTS_DIR / "02_deseq2_deg.py").read_text(encoding="utf-8")
+    assert "deseq2_table_dt_filename(args.gse, args.group_col, contrast)" in src
+    assert "deseq2_table_dt_filename(args.gse, args.group_col, k)" in src
+
+
+def test_erapid_help_exposes_documented_sva_and_fgsea_flags():
+    proc = subprocess.run(
+        [sys.executable, str(ERAPID_ROOT / "erapid.py"), "--help"],
+        cwd=ERAPID_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    help_text = proc.stdout
+    for flag in (
+        "--sva_auto_skip_n",
+        "--sva_guard_cor_thresh",
+        "--no_auto_sv_from_deseq2",
+        "--fgsea_score_type",
+        "--fgsea_dedup_strategy",
+    ):
+        assert flag in help_text
+
+
+def test_erapid_forwards_helper_backed_sva_and_fgsea_flags():
+    src = (ERAPID_ROOT / "erapid.py").read_text(encoding="utf-8")
+    assert '"--sva_guard_cor_thresh", str(args.sva_guard_cor_thresh)' in src
+    assert '"--sva_auto_skip_n", str(args.sva_auto_skip_n)' in src
+    assert 'dream_cmd += ["--no_auto_sv_from_deseq2"]' in src
+    assert 'fg_cmd += ["--score_type", args.fgsea_score_type, "--dedup_strategy", args.fgsea_dedup_strategy]' in src
+
+
+def test_erapid_deg_dt_rebuild_skips_deseq2_and_does_not_write_vanilla():
+    src = (ERAPID_ROOT / "erapid.py").read_text(encoding="utf-8")
+    start = src.index("for method in deg_methods_ran:")
+    end = src.index("deg_dashboard_info = _build_combined_deg_dashboard", start)
+    block = src[start:end]
+    assert 'if method == "deseq2":' in block
+    assert "continue" in block
+    assert "_write_vanilla_table(tsv, out_html" not in block
+    assert "DataTables rebuild FAILED" in block

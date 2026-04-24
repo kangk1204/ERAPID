@@ -67,6 +67,12 @@ def _r_str(s: str) -> str:
     return f'"{s}"'
 
 
+def deseq2_table_dt_filename(gse: str, group_col: str, contrast: str) -> str:
+    """Return the DESeq2 interactive table filename used by dashboards."""
+    contrast_tag = contrast if contrast.endswith("__deseq2") else f"{contrast}__deseq2"
+    return f"{gse}__{group_col}__{contrast_tag}__table_dt.html"
+
+
 def _chunk_for_r(s: str, size: int = 512) -> list[str]:
     """Split a long string into chunks safe for R literals."""
     if size <= 0:
@@ -2517,10 +2523,11 @@ if ('Symbol' %in% colnames(df)) {
       anno_text <- paste0('DEG up: ', n_up_plot, ' · down: ', n_down_plot)
 
       title_core <- paste0(gse_id, ' — ', levelA, ' vs ', levelB)
-      # NOTE: __table_dt.html is generated exclusively by the Python Bootstrap/DataTables
-      # rebuild step (build_dt_bootstrap.py) after this R script returns. The R-side
-      # self-contained fallback has been removed so a pretty, bundled-asset DataTables
-      # view is the only output; failures are now reported loudly by the Python driver.
+      # NOTE: __deseq2__table_dt.html is generated exclusively by the Python
+      # Bootstrap/DataTables rebuild step (build_dt_bootstrap.py) after this R script
+      # returns. The R-side self-contained fallback has been removed so a pretty,
+      # bundled-asset DataTables view is the only output; failures are now reported
+      # loudly by the Python driver.
       volcano_png <- paste0(plot_prefix, '__volcano.png')
       volcano_html <- paste0(plot_prefix, '__volcano.html')
       if (plot_volcano(df, lfc_plot, padj_thresh, lfc_thresh, paste0(title_core, ' (Volcano)'), volcano_png,
@@ -2956,7 +2963,7 @@ def main(argv=None) -> int:
             if not base.startswith(prefix):
                 continue
             contrast = base[len(prefix):-len("__deseq2.tsv")]
-            out_html = os.path.join(args.outdir, f"{prefix}{contrast}__table_dt.html")
+            out_html = os.path.join(args.outdir, deseq2_table_dt_filename(args.gse, args.group_col, contrast))
             title = f"{args.gse} — {contrast.replace('__', ' ')} (DEG table)"
             proc = _sp.run(
                 [
@@ -3084,7 +3091,7 @@ def main(argv=None) -> int:
                     return f'<a href="{_html.escape(fname)}">{_html.escape(label)}</a>'
                 # Ensure interactive table link is present even if file generated after index (predictable name)
                 if not r.get('table_dt'):
-                    r['table_dt'] = f"{args.gse}__{args.group_col}__{k}__table_dt.html"
+                    r['table_dt'] = deseq2_table_dt_filename(args.gse, args.group_col, k)
                 rows.append(
                     f"<tr><td class='contrast'>{_html.escape(k)}</td>"
                     f"<td>{link('DEG Table', r.get('table_dt'))}</td>"
