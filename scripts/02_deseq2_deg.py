@@ -118,6 +118,7 @@ def build_r_script(args) -> str:
     s_gse         = _r_str(args.gse)
     s_group_col   = _r_str(args.group_col)
     s_batch_cols  = _r_str(args.batch_cols or '')
+    s_cont_cov    = _r_str(getattr(args, 'continuous_covariates', '') or '')
     s_batch_method= _r_str(args.batch_method)
     s_rank_metric = _r_str(args.rank_metric)
     s_group_ref   = _r_str(args.group_ref)
@@ -213,6 +214,7 @@ def build_r_script(args) -> str:
     parts.append("    gse_id      <- " + s_gse + "\n")
     parts.append("    group_col   <- " + s_group_col + "\n")
     parts.append("    batch_cols  <- " + s_batch_cols + "\n")
+    parts.append("    continuous_covariates <- " + s_cont_cov + "\n")
     parts.append("    batch_method<- " + s_batch_method + "\n")
     parts.append("    rank_metric <- " + s_rank_metric + "\n")
     parts.append("    group_ref   <- " + s_group_ref + "\n")
@@ -1322,9 +1324,24 @@ def build_r_script(args) -> str:
       if (length(missing_bc) > 0) stop("Batch columns not found in coldata: ", paste(missing_bc, collapse=","))
     }
 
+    # Covariates the caller declares genuinely continuous: keep numeric and skip
+    # the integer-like-levels -> factor coercion below. Without this, a true
+    # continuous covariate (e.g. Age in years) with few distinct integer values
+    # -- which happens easily at small n or after leave-one-out -- gets coerced
+    # to a high-df factor, inflating model rank and often breaking estimability.
+    continuous_cov_vec <- character(0)
+    if (exists("continuous_covariates") && nzchar(continuous_covariates)) {
+      continuous_cov_vec <- trimws(strsplit(continuous_covariates, ",")[[1]])
+      continuous_cov_vec <- continuous_cov_vec[nzchar(continuous_cov_vec)]
+    }
     if (length(batch_cols_vec) > 0) {
       for (vn in batch_cols_vec) {
         if (!(vn %in% colnames(coldata))) next
+        if (vn %in% continuous_cov_vec) {
+          suppressWarnings(coldata[[vn]] <- as.numeric(coldata[[vn]]))
+          message("[info] Keeping covariate continuous (no factor coercion): ", vn)
+          next
+        }
         x <- coldata[[vn]]
         if (is.numeric(x)) {
           lv <- unique(x[is.finite(x)])
@@ -2809,6 +2826,7 @@ def main(argv=None) -> int:
     ap.add_argument("--group_col", default="group_primary")
     ap.add_argument("--id_col", default="GeneID", help="Name of ID column (first column) in counts/TPM files")
     ap.add_argument("--batch_cols", default="", help="Comma-separated covariates to include (e.g., 'sex,age')")
+    ap.add_argument("--continuous_covariates", default="", help="Comma-separated covariates to keep numeric/continuous (skip the integer-like-levels -> factor coercion), e.g. 'Age,Pre_BMI,Sample_GA_days'")
     ap.add_argument("--batch_method", default="design", choices=["design","sva","combat","auto"], help="design=include covariates; sva=svaseq; auto=diagnose and choose; combat=export ComBat-seq counts, still use design for DE")
     ap.add_argument("--rank_metric", default="pval_lfc", choices=["pval_lfc","stat","lfc","signed_p"], help="Ranking metric for .rnk files")
     ap.add_argument(
