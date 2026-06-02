@@ -2194,16 +2194,36 @@ def build_r_script(args) -> str:
       message("[info] Contrast orientation: positive LFC => ", levelA, " upregulated vs ", levelB,
               " (alpha=", alpha_use, ", nA=", sum(coldata[[group_col]] == levelA),
               ", nB=", sum(coldata[[group_col]] == levelB), ")")
-      # LFC shrinkage: try apeglm first, fall back to ashr, else report unshrunk with a visible warning
+      # LFC shrinkage: apeglm requires a model COEFFICIENT (not a contrast). The
+      # factor was releveled to ref=levelB and DESeq refit above, so the coefficient
+      # `<group_col>_<levelA>_vs_<levelB>` encodes exactly this contrast. Passing
+      # contrast= with type="apeglm" raises "type='apeglm' shrinkage only for use
+      # with 'coef'" and then silently degrades to UNSHRUNK LFC, which propagates
+      # into logFC/LogFC (see canonicalization below) and thus the DEG |LFC| gate
+      # and the GSEA ranking. Shrink the coefficient directly instead.
       shrink_method_used <- NA_character_
-      resL <- try(lfcShrink(dds_sub, contrast = c(group_col, levelA, levelB), type = "apeglm"), silent=TRUE)
+      rn_sub <- resultsNames(dds_sub)
+      coef_name <- paste0(group_col, "_", levelA, "_vs_", levelB)
+      if (!(coef_name %in% rn_sub)) {
+        cand <- rn_sub[startsWith(rn_sub, paste0(group_col, "_")) &
+                       grepl(levelA, rn_sub, fixed = TRUE) &
+                       grepl(levelB, rn_sub, fixed = TRUE)]
+        if (length(cand) == 1L) coef_name <- cand
+      }
+      if (coef_name %in% rn_sub) {
+        resL <- try(lfcShrink(dds_sub, coef = coef_name, type = "apeglm"), silent=TRUE)
+        if (!inherits(resL, "try-error")) shrink_method_used <- "apeglm"
+      } else {
+        resL <- structure(list(), class = "try-error")
+        message("[warn] apeglm coef not found for ", levelA, " vs ", levelB,
+                " (resultsNames: ", paste(rn_sub, collapse = ", "), ")")
+      }
       if (inherits(resL, "try-error")) {
+        emsg <- if (!is.null(attr(resL, 'condition'))) attr(resL, 'condition')$message else "coef unavailable"
         message("[warn] lfcShrink(apeglm) failed for ", levelA, " vs ", levelB,
-                "; attempting ashr fallback. Error: ", attr(resL, 'condition')$message)
+                "; attempting ashr fallback. Error: ", emsg)
         resL <- try(lfcShrink(dds_sub, contrast = c(group_col, levelA, levelB), type = "ashr"), silent=TRUE)
         if (!inherits(resL, "try-error")) shrink_method_used <- "ashr"
-      } else {
-        shrink_method_used <- "apeglm"
       }
       if (!inherits(resL, "try-error")) {
         res$log2FoldChange_shrunk <- resL$log2FoldChange
@@ -2635,10 +2655,22 @@ if ('Symbol' %in% colnames(df)) {
           key <- paste0(level_test, '_vs_', level_ref)
           sel <- coldata[[group_col]] %in% c(level_test, level_ref)
           dds_s <- dds_in[, sel]; dds_s[[group_col]] <- droplevels(dds_s[[group_col]])
+          # Relevel so level_ref is the reference -> apeglm can shrink the coefficient.
+          if (level_ref %in% levels(dds_s[[group_col]])) {
+            dds_s[[group_col]] <- stats::relevel(dds_s[[group_col]], ref = level_ref)
+          }
           dds_s <- DESeq(dds_s, parallel=FALSE)
           alpha_use_s <- if (exists('deg_padj_thresh') && is.finite(deg_padj_thresh)) as.numeric(deg_padj_thresh) else 0.05
           res <- results(dds_s, contrast=c(group_col, level_test, level_ref), alpha=alpha_use_s)
-          lfc_s <- try(lfcShrink(dds_s, contrast=c(group_col, level_test, level_ref), type='apeglm'), silent=TRUE)
+          coef_name_s <- paste0(group_col, '_', level_test, '_vs_', level_ref)
+          rn_s <- resultsNames(dds_s)
+          if (!(coef_name_s %in% rn_s)) {
+            cand_s <- rn_s[startsWith(rn_s, paste0(group_col, '_')) &
+                           grepl(level_test, rn_s, fixed = TRUE) &
+                           grepl(level_ref, rn_s, fixed = TRUE)]
+            if (length(cand_s) == 1L) coef_name_s <- cand_s
+          }
+          lfc_s <- if (coef_name_s %in% rn_s) try(lfcShrink(dds_s, coef=coef_name_s, type='apeglm'), silent=TRUE) else structure(list(), class='try-error')
           if (inherits(lfc_s, 'try-error')) {
             message('[warn] sensitivity-panel lfcShrink(apeglm) failed for ', level_test, ' vs ', level_ref, '; trying ashr')
             lfc_s <- try(lfcShrink(dds_s, contrast=c(group_col, level_test, level_ref), type='ashr'), silent=TRUE)
