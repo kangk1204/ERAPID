@@ -2965,6 +2965,8 @@ def main(argv=None) -> int:
     ap.add_argument("--meta_include", default="", help="Optional comma-separated GSE:contrast pairs to include in meta analysis (filters others out). Example: GSE153873:ad_vs_old_common_deg,GSE95587:ad_vs_control_common_deg. If empty, all contrasts are included.")
     ap.add_argument("--meta_key", default="geneid", choices=["geneid", "ensembl", "symbol"], help="Gene aggregation key for cross-cohort meta-analysis. 'geneid' (default) matches on the raw GeneID and only works when all cohorts share a namespace; use 'ensembl' (unversioned EnsemblGeneID) or 'symbol' to combine cohorts that use different ID namespaces (e.g. Ensembl vs Entrez).")
     ap.add_argument("--batch_cols", default="", help="Explicit comma-separated batch covariates for DESeq2 design (overrides auto)")
+    ap.add_argument("--continuous_covariates", default="", help="Comma-separated covariates to keep numeric/continuous in the DESeq2 (and dream) design, bypassing the integer-like-levels -> factor coercion. Use for genuinely continuous covariates (e.g. Age,Pre_BMI,Sample_GA_days) so small-n / leave-one-out runs stay full-rank.")
+    ap.add_argument("--center_scale_numeric", action="store_true", help="Center and scale numeric covariates in the DESeq2 design before fitting (recommended for large-mean continuous covariates such as Age/Sample_GA_days to avoid collinearity with the intercept).")
     ap.add_argument("--batch_method", default="auto", choices=["design","sva","combat","auto"], help="design=include covariates; sva=svaseq (adds SVs); auto=diagnose and choose; combat=export ComBat-seq counts only")
     ap.add_argument("--sva_corr_p_thresh", type=float, default=0.05, help="AUTO: if any SV associates with group (ANOVA p < thresh), keep design-only")
     ap.add_argument("--sva_guard_cor_thresh", type=float, default=0.8, help="AUTO: |cor(SV, libsize/zero-fraction/QC)| threshold that triggers SV rejection")
@@ -3750,6 +3752,10 @@ def main(argv=None) -> int:
                     deg_cmd += ["--annot", annot_path]
                 if batch_cols:
                     deg_cmd += ["--batch_cols", batch_cols]
+                if getattr(args, 'continuous_covariates', ''):
+                    deg_cmd += ["--continuous_covariates", args.continuous_covariates]
+                if getattr(args, 'center_scale_numeric', False):
+                    deg_cmd += ["--center_scale_numeric"]
                 if args.batch_method:
                     deg_cmd += ["--batch_method", args.batch_method]
                 if args.batch_method in ("sva", "auto"):

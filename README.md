@@ -106,6 +106,8 @@ The steps below work on Linux/WSL/macOS. Windows users should run inside WSL2 or
    - Optional flags:
      - `--auto_batch_cols` to auto-include common covariates (sex/age/tissue) in the design.
    - `--batch_cols age,sex` for an explicit formula.
+   - `--continuous_covariates Age,Pre_BMI,Sample_GA_days` keeps genuinely continuous covariates **numeric**, bypassing the "≤10 integer-like levels → factor" coercion. **Recommended** for continuous covariates (age, BMI, gestational age). Without it, a continuous variable with few distinct integer values — common at small *n* or after leave-one-out — gets coerced into a many-level factor, which inflates the model rank and can make the full design singular (non-estimable).
+   - `--center_scale_numeric` centers and scales numeric covariates before fitting. **Recommended together with `--continuous_covariates`** for large-mean variables (e.g. age ≈ 33, gestational-age-in-days ≈ 170): DESeq2 warns that uncentered large-mean covariates induce collinearity with the intercept, which can inflate the apparent DEG count. Centering gives a more stable, conservative fit (in our testing an uncentered continuous-age design reported ~40% more DEGs than the centered one on the same samples).
    - `--deg_padj_thresh 0.1` to relax/tighten the adjusted p-value threshold used across DESeq2, dream, and meta summaries (default 0.05).
    - `--deseq2_min_count 5` to change the raw-count prefilter applied before DESeq2 fitting (dream retains its own `--dream_min_count` setting).
    - `--fgsea_score_type std|pos|neg` to control fgsea's score type (default `std`), and `--fgsea_dedup_strategy maxabs|first` to choose how duplicate RNK identifiers are collapsed before enrichment.
@@ -216,6 +218,9 @@ python erapid.py \
 - `--deg_padj_thresh`: unified padj cut-off used by DESeq2, dream, and meta dashboards.
 - `--deseq2_min_count` / `--dream_min_count`: raw count thresholds for each DEG engine’s prefilter step.
 - `--sva_auto_skip_n`, `--sva_guard_cor_thresh`, `--no_auto_sv_from_deseq2`: expose SVA guard controls from the underlying DESeq2/dream scripts.
+- `--continuous_covariates`: keep listed covariates numeric (skip the integer-like→factor coercion). Recommended for age/BMI/gestational-age, especially at small *n* or for leave-one-out, to keep the full design estimable.
+- `--center_scale_numeric`: center/scale numeric covariates in the DESeq2 design. Recommended together with `--continuous_covariates` for large-mean variables to avoid intercept collinearity and DEG inflation.
+- `--meta_key geneid|ensembl|symbol`: gene aggregation key for cross-cohort meta-analysis. Use `ensembl` or `symbol` to combine cohorts that use different ID namespaces (e.g. Ensembl vs NCBI Entrez); `geneid` (default) only matches when all cohorts share a namespace. The meta summary also reports `CohortCount` (distinct studies) alongside `PresenceCount` (contrasts).
 - `--fgsea_score_type`, `--fgsea_dedup_strategy`: pass fgsea score-type and RNK duplicate-collapsing policy through the top-level workflow.
 
 ## SVA Sensitivity (Supplementary)
