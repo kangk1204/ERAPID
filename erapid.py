@@ -491,12 +491,21 @@ def _is_near_alias(df: pd.DataFrame, col: str, ref_col: str, threshold: float = 
         cross = pd.crosstab(series_col[mask], series_ref[mask])
         if cross.empty:
             return False
-        dominant = cross.max(axis=1)
+        # An alias means the two columns encode (near-)identical partitions, i.e.
+        # the value mapping is near-functional in BOTH directions. Checking only
+        # col -> ref is satisfied trivially by any high-cardinality / continuous
+        # column: each distinct value occupies its own crosstab row, so
+        # dominant/row_total == 1.0 for every row. That false-positives genuine
+        # numeric covariates (e.g. Pre_BMI, Age) as "aliases" of the group column
+        # and silently drops them from the design. Require the reverse direction
+        # (ref -> col) as well, so only true relabelings/coarsenings are flagged.
         row_totals = cross.sum(axis=1)
-        if (row_totals <= 0).any():
+        col_totals = cross.sum(axis=0)
+        if (row_totals <= 0).any() or (col_totals <= 0).any():
             return False
-        row_agreement = dominant / row_totals
-        if (row_agreement >= threshold).all():
+        row_agreement = cross.max(axis=1) / row_totals  # col -> ref
+        col_agreement = cross.max(axis=0) / col_totals  # ref -> col
+        if (row_agreement >= threshold).all() and (col_agreement >= threshold).all():
             return True
     except Exception:
         return False
@@ -1292,20 +1301,34 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
 
             genes_in_contrast = contrast_gene_sets.setdefault(contrast_key, set())
 
+            meta_key_mode = getattr(args, 'meta_key', 'geneid') or 'geneid'
+            _MISSING_TOK = ('', 'na', 'nan', 'none', 'null')
             for _, row in iter_df.iterrows():
                 gene_id = str(row.get('GeneID', '')).strip()
                 if not gene_id:
                     continue
                 symbol = _choose_symbol(row)
+                # Aggregation key: GeneID namespaces differ across studies (e.g.
+                # versioned Ensembl in one cohort, NCBI Entrez in another), so keying
+                # meta on the raw GeneID makes cross-cohort overlap STRUCTURALLY
+                # impossible -- no gene can ever match. --meta_key ensembl|symbol
+                # aggregates on a shared namespace instead (default geneid = legacy).
+                if meta_key_mode == 'ensembl':
+                    ens = str(row.get('EnsemblGeneID', '')).strip()
+                    agg_key = ens.split('.')[0] if ens and ens.lower() not in _MISSING_TOK else gene_id
+                elif meta_key_mode == 'symbol':
+                    agg_key = symbol.strip().upper() if symbol and symbol.strip().lower() not in _MISSING_TOK else gene_id
+                else:
+                    agg_key = gene_id
                 logfc_val = logfc_accessor(row)
                 padj_val = padj_accessor(row)
                 direction = str(row.get('Direction', '')).strip() if 'Direction' in row else ''
                 if not direction and logfc_val is not None and not pd.isna(logfc_val):
                     direction = 'Up' if float(logfc_val) >= 0 else 'Down'
                 alias_list = _extract_aliases(row, symbol, gene_id)
-                _update_store(per_gene, gene_id, symbol, contrast_key, simple_label, gse_id,
+                _update_store(per_gene, agg_key, symbol, contrast_key, simple_label, gse_id,
                               direction, logfc_val, padj_val, alias_list)
-                genes_in_contrast.add(gene_id)
+                genes_in_contrast.add(agg_key)
 
         contrast_counts = {key: len(gset) for key, gset in contrast_gene_sets.items()}
         if allowed_contrasts and not contrast_meta_local:
@@ -1448,14 +1471,15 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
         if df.empty:
             return df
         df = df.copy()
+        df['_meta_sort_cohort'] = pd.to_numeric(df.get('CohortCount'), errors='coerce').fillna(0)
         df['_meta_sort_presence'] = pd.to_numeric(df.get('PresenceCount'), errors='coerce').fillna(0)
         df['_meta_sort_padj'] = pd.to_numeric(df.get('MetaBestPadj'), errors='coerce')
         df.sort_values(
-            ['_meta_sort_presence', '_meta_sort_padj', 'GeneID'],
-            ascending=[False, True, True],
+            ['_meta_sort_cohort', '_meta_sort_presence', '_meta_sort_padj', 'GeneID'],
+            ascending=[False, False, True, True],
             inplace=True,
         )
-        df.drop(columns=['_meta_sort_presence', '_meta_sort_padj'], inplace=True)
+        df.drop(columns=['_meta_sort_cohort', '_meta_sort_presence', '_meta_sort_padj'], inplace=True)
         df.reset_index(drop=True, inplace=True)
         return df
 
@@ -1479,6 +1503,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
         'Symbol',
         'Alias',
         'PresenceCount',
+        'CohortCount',
         'ConsensusDirection',
         'SharedContrasts',
         'SharedGSEs',
@@ -1509,6 +1534,14 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             per_contrast.keys(), key=lambda ck: contrast_order_index.get(ck, 0)
         )
         presence_count = len(presence_keys)
+        # PresenceCount counts CONTRASTS the gene is significant in; one cohort with
+        # multiple contrasts (e.g. gdm_vs_control + hdp_vs_control share the controls)
+        # inflates it and can masquerade as cross-study support. CohortCount is the
+        # number of distinct studies (GSEs) -> the real cross-study reproducibility
+        # signal used for ranking and evidence weighting below.
+        cohort_count = len({
+            contrast_meta[key]['gse'] for key in presence_keys if key in contrast_meta
+        })
         numeric_cols = {
             col for col in columns_base if col.endswith(('meanLogFC', 'bestPadj'))
         } | {'MetaEvidenceScore', 'MetaEvidencePubMedHits'}
@@ -1525,6 +1558,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
         )
         row['Alias'] = ';'.join(alias_tokens)
         row['PresenceCount'] = presence_count
+        row['CohortCount'] = cohort_count
         row['SharedContrasts'] = ','.join(
             contrast_meta[key]['display'] for key in presence_keys if key in contrast_meta
         )
@@ -1588,14 +1622,17 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
     summary_df = _sort_meta_summary(summary_df)
 
     if meta_keywords and not summary_df.empty:
-        evidence_candidates = summary_df[['GeneID', 'Symbol', 'MetaMeanLogFC', 'MetaBestPadj', 'PresenceCount']].copy()
+        evidence_candidates = summary_df[['GeneID', 'Symbol', 'MetaMeanLogFC', 'MetaBestPadj', 'CohortCount']].copy()
         evidence_candidates['GeneID'] = evidence_candidates['GeneID'].astype(str)
         evidence_candidates = evidence_candidates[evidence_candidates['GeneID'].str.strip() != '']
         if not evidence_candidates.empty:
-            evidence_candidates['PresenceCount'] = pd.to_numeric(
-                evidence_candidates['PresenceCount'], errors='coerce'
+            # Weight evidence by the number of distinct studies (CohortCount), not the
+            # contrast count, so within-cohort multi-contrast genes are not treated as
+            # cross-study replicated.
+            evidence_candidates['CohortCount'] = pd.to_numeric(
+                evidence_candidates['CohortCount'], errors='coerce'
             ).fillna(1.0)
-            pseudo_p = 1.0 / (evidence_candidates['PresenceCount'].clip(lower=1.0) + 1.0)
+            pseudo_p = 1.0 / (evidence_candidates['CohortCount'].clip(lower=1.0) + 1.0)
             meta_best = pd.to_numeric(evidence_candidates['MetaBestPadj'], errors='coerce')
             evidence_candidates['P.Value'] = meta_best.where(meta_best.notna(), pseudo_p)
             evidence_candidates['adj.P.Val'] = evidence_candidates['P.Value']
@@ -1930,6 +1967,7 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             'Symbol',
             'Alias',
             'PresenceCount',
+            'CohortCount',
             'ConsensusDirection',
             'SharedContrasts',
             'SharedGSEs',
@@ -1956,10 +1994,11 @@ def _run_meta_phase(args, gse_list: Sequence[str]) -> int:
             ]
             for col in numeric_targets:
                 top_df[col] = top_df[col].apply(_fmt_num)
-            if 'PresenceCount' in top_df.columns:
-                top_df['PresenceCount'] = top_df['PresenceCount'].apply(
-                    lambda v: '' if pd.isna(v) else str(int(v))
-                )
+            for _cnt_col in ('PresenceCount', 'CohortCount'):
+                if _cnt_col in top_df.columns:
+                    top_df[_cnt_col] = top_df[_cnt_col].apply(
+                        lambda v: '' if pd.isna(v) else str(int(v))
+                    )
             top_df = top_df.fillna('')
             top_preview_html = top_df.to_html(index=False, classes='preview-table', escape=True)
 
@@ -2924,6 +2963,7 @@ def main(argv=None) -> int:
     ap.add_argument("--method", choices=["deseq2", "dream", "both"], help="Meta-analysis mode (--phase meta). Defaults to --deg_method when unspecified.")
     ap.add_argument("--out", default="", help="Output directory for meta-analysis results (--phase meta)")
     ap.add_argument("--meta_include", default="", help="Optional comma-separated GSE:contrast pairs to include in meta analysis (filters others out). Example: GSE153873:ad_vs_old_common_deg,GSE95587:ad_vs_control_common_deg. If empty, all contrasts are included.")
+    ap.add_argument("--meta_key", default="geneid", choices=["geneid", "ensembl", "symbol"], help="Gene aggregation key for cross-cohort meta-analysis. 'geneid' (default) matches on the raw GeneID and only works when all cohorts share a namespace; use 'ensembl' (unversioned EnsemblGeneID) or 'symbol' to combine cohorts that use different ID namespaces (e.g. Ensembl vs Entrez).")
     ap.add_argument("--batch_cols", default="", help="Explicit comma-separated batch covariates for DESeq2 design (overrides auto)")
     ap.add_argument("--batch_method", default="auto", choices=["design","sva","combat","auto"], help="design=include covariates; sva=svaseq (adds SVs); auto=diagnose and choose; combat=export ComBat-seq counts only")
     ap.add_argument("--sva_corr_p_thresh", type=float, default=0.05, help="AUTO: if any SV associates with group (ANOVA p < thresh), keep design-only")
@@ -3840,6 +3880,14 @@ def main(argv=None) -> int:
                 ]
                 fixed_spec = args.dream_fixed_effects if args.dream_fixed_effects else None
                 summary_used = False
+                if not fixed_spec and args.batch_cols.strip():
+                    # Inherit the DESeq2 design covariates so dream is adjusted for the
+                    # SAME confounders. Without this, dream silently fits an unadjusted
+                    # ~ 1 + group model (the AD-centric fixed_default names below do not
+                    # match non-brain studies), while DESeq2 adjusts for --batch_cols.
+                    # "dream corroborates DESeq2" then compares non-comparable models.
+                    fixed_spec = args.batch_cols.strip()
+                    print(f"[info] dream inheriting DESeq2 --batch_cols as fixed effects: {fixed_spec}")
                 if not fixed_spec and cov_summary["all"]:
                     fixed_spec = ",".join(cov_summary["all"])
                     summary_used = True
