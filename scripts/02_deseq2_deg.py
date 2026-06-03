@@ -1489,8 +1489,16 @@ def build_r_script(args) -> str:
         scaled <- character(0)
         for (vn in to_scale) {
           if (is.numeric(coldata[[vn]])) {
-            coldata[[vn]] <- as.numeric(scale(coldata[[vn]], center=TRUE, scale=TRUE))
-            scaled <- c(scaled, vn)
+            sdv <- stats::sd(coldata[[vn]], na.rm=TRUE)
+            if (is.finite(sdv) && sdv > 0) {
+              coldata[[vn]] <- as.numeric(scale(coldata[[vn]], center=TRUE, scale=TRUE))
+              scaled <- c(scaled, vn)
+            } else {
+              # zero-variance / non-finite sd: scale(scale=TRUE) would divide by 0 -> NaN.
+              # Center only (constant columns are normally pruned upstream; this is defense-in-depth).
+              coldata[[vn]] <- as.numeric(coldata[[vn]] - mean(coldata[[vn]], na.rm=TRUE))
+              message("[warn] Covariate ", vn, " has zero/undefined variance; centered only (not scaled)")
+            }
           }
         }
         if (length(scaled) > 0) message("[info] Center/scaled numeric covariates: ", paste(scaled, collapse=","))
